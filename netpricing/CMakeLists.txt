@@ -8,6 +8,8 @@ add_executable (netpricing
 	"netpricing.cpp"
 	"netpricing.h"
 	"problem.cpp"
-	"problem.h")
+	"problem.h"
+	"problem_generator.h"
+	"graph_algorithm.h")
 
 # TODO: Add tests and install targets if needed.

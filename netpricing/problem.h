@@ -27,6 +27,7 @@ struct problem
 	graph_type graph;
 	std::vector<commodity> commodities;
 
+	// Read and write
 	static std::vector<problem> read_from_json(std::string filename);
 	static void write_to_json(std::string filename, const std::vector<problem>& problems);
 

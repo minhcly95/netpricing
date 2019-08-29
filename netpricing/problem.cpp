@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <utility>
 
 #include <boost/graph/graph_traits.hpp>
 #include <nlohmann/json.hpp>
@@ -54,7 +55,7 @@ vector<problem> problem::read_from_json(std::string filename)
 		}
 
 		// Add the problem into the list
-		all_problems.push_back(problem{ graph, commodities });
+		all_problems.push_back(problem{ graph, std::move(commodities) });
 	}
 
 	return all_problems;
