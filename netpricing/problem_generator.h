@@ -76,8 +76,8 @@ problem random_problem_from_graph(const input_graph_type& input_graph,
 	int target_tolled = round(toll_proportion * candidates.size());
 	int num_tolled = 0;
 
-	using tolled_map_type = property_map<problem::graph_type, edge_tolled_t>::type;
-	tolled_map_type tolled_map = get(edge_tolled, graph);
+	auto tolled_map = get(edge_tolled, graph);
+	auto cost_map = get(edge_weight, graph);
 
 	while (num_tolled < target_tolled && candidates.size() > 0) {
 		edge_type edge = candidates.back();
@@ -98,6 +98,7 @@ problem random_problem_from_graph(const input_graph_type& input_graph,
 		// If OK, set edge as tolled
 		if (ok_to_remove) {
 			tolled_map[edge] = true;
+			cost_map[edge] /= 2;
 			++num_tolled;
 		}
 		// Otherwise, re-add the removed edge
@@ -106,7 +107,7 @@ problem random_problem_from_graph(const input_graph_type& input_graph,
 		}
 	}
 
-	return problem{ graph, std::move(commodities) };
+	return problem(graph, std::move(commodities));
 }
 
 

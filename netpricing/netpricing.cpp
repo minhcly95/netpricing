@@ -2,29 +2,29 @@
 //
 
 #include "netpricing.h"
-#include "problem.h"
-#include "problem_generator.h"
-
-#include <iostream>
-#include <boost/graph/graph_traits.hpp>
 
 using namespace std;
 using namespace boost;
 
 int main()
 {
-	cout << "Hello CMake." << endl;
+	//problem prob = random_problem(10, 20, 5, 0.5f);
+	problem prob = std::move(problem::read_from_json("../../../../resources/problems/g10-4.json")[0]);
 
-	problem prob = random_problem(10, 20, 3, 0.5f);
+	IloEnv env;
 
-	cout << "edges(g) = " << endl;
-	property_map<problem::graph_type, edge_tolled_t>::type edge_tolled_map = get(edge_tolled, prob.graph);
-	property_map<problem::graph_type, edge_weight_t>::type edge_weight_map = get(edge_weight, prob.graph);
-	graph_traits<problem::graph_type>::edge_iterator ei, ei_end;
+	standard_model model(env, prob);
 
-	for (tie(ei, ei_end) = edges(prob.graph); ei != ei_end; ++ei) {
-		cout << "\t(" << source(*ei, prob.graph) << "," << target(*ei, prob.graph) << ") " << edge_tolled_map[*ei] << " " << edge_weight_map[*ei] << endl;
+	IloCplex cplex(model.cplex_model);
+	if (!cplex.solve()) {
+		env.error() << "Failed to optimize LP." << endl;
+		throw(-1);
 	}
+
+	env.out() << "Solution status = " << cplex.getStatus() << endl;
+	env.out() << "Solution value = " << cplex.getObjValue() << endl;
+
+	env.end();
 
 	return 0;
 }

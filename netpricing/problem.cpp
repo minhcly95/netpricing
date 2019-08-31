@@ -1,16 +1,57 @@
 #include "problem.h"
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <functional>
 #include <map>
+#include <numeric>
 #include <utility>
 
+#include <boost/graph/copy.hpp>
 #include <boost/graph/graph_traits.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <nlohmann/json.hpp>
+
+#include "macros.h"
+
+#define GET_DISTANCE_MAP(graph, source, map) \
+	boost::dijkstra_shortest_paths(graph, source, boost::distance_map(boost::make_iterator_property_map(map.begin(), boost::get(boost::vertex_index, graph))))
 
 using namespace std;
 using namespace boost;
 using json = nlohmann::json;
+
+problem::problem(const graph_type& _graph, const std::vector<commodity>& commodities) :
+	graph(_graph), commodities(commodities),
+	is_tolled_map(boost::get(edge_tolled, graph)),
+	cost_map(boost::get(boost::edge_weight, graph)),
+	tollfree_graph(graph, edge_tollfree_predicate<edge_tolled_map_type>(is_tolled_map))
+{
+	update();
+}
+
+problem::problem(const graph_type& _graph, std::vector<commodity>&& commodities) :
+	graph(_graph), commodities(std::move(commodities)),
+	is_tolled_map(boost::get(edge_tolled, graph)),
+	cost_map(boost::get(boost::edge_weight, graph)),
+	tollfree_graph(graph, edge_tollfree_predicate<edge_tolled_map_type>(is_tolled_map))
+{
+	update();
+}
+
+problem::problem(const problem& prob) : problem(prob.graph, prob.commodities) { }
+
+problem::problem(problem&& prob) :
+	graph(prob.graph), commodities(std::move(prob.commodities)),
+	is_tolled_map(boost::get(edge_tolled, graph)),
+	cost_map(boost::get(boost::edge_weight, graph)),
+	tollfree_graph(graph, edge_tollfree_predicate<edge_tolled_map_type>(is_tolled_map)),
+	big_m(std::move(prob.big_m)),
+	big_n(std::move(prob.big_n))
+{
+	update_indices();
+}
 
 vector<problem> problem::read_from_json(std::string filename)
 {
@@ -55,7 +96,7 @@ vector<problem> problem::read_from_json(std::string filename)
 		}
 
 		// Add the problem into the list
-		all_problems.push_back(problem{ graph, std::move(commodities) });
+		all_problems.push_back(problem(graph, std::move(commodities)));
 	}
 
 	return all_problems;
@@ -126,4 +167,88 @@ void problem::write_to_json(std::string filename, const std::vector<problem>& pr
 void problem::write_to_json(std::string filename) const
 {
 	write_to_json(filename, vector<problem> { *this });
+}
+
+void problem::update()
+{
+	update_indices();
+	update_big_mn();
+}
+
+void problem::update_indices()
+{
+	using namespace std;
+	using namespace boost;
+	using edge_index_rel = edge_index_bimap_type::value_type;
+
+	// Reset
+	tolled_index_map.clear();
+	tollfree_index_map.clear();
+	alledges_index_map.clear();
+
+	// Mapping
+	edge_iterator ei, ei_end;
+	int tolled_index = 0, tollfree_index = 0;
+
+	for (tie(ei, ei_end) = edges(graph); ei != ei_end; ++ei) {
+		bool is_tolled = is_tolled_map[*ei];
+		if (is_tolled) {
+			tolled_index_map.insert(edge_index_rel(tolled_index++, *ei));
+		}
+		else {
+			tollfree_index_map.insert(edge_index_rel(tollfree_index++, *ei));
+		}
+	}
+
+	// All edges mapping
+	auto alledges_inserter = inserter(alledges_index_map, alledges_index_map.begin());
+
+	copy(tolled_index_map.begin(), tolled_index_map.end(), alledges_inserter);
+	transform(tollfree_index_map.begin(), tollfree_index_map.end(), alledges_inserter,
+			  [tolled_index](const edge_index_rel& entry) {
+				  return edge_index_rel(entry.left + tolled_index, entry.right);
+			  });
+}
+
+void problem::update_big_mn()
+{
+	int V = num_vertices(graph);
+	int K = commodities.size();
+	int A1 = tolled_index_map.size();
+
+	big_m = cost_matrix(K, cost_array(A1));
+	big_n = cost_array(A1);
+
+	cost_matrix tollfree_o(K, cost_array(V)), nulltoll_o(K, cost_array(V));
+	LOOP(k, K) {
+		int o = commodities[k].origin;
+		GET_DISTANCE_MAP(graph, o, nulltoll_o[k]);
+		GET_DISTANCE_MAP(tollfree_graph, o, tollfree_o[k]);
+	}
+
+	LOOP(a, A1) {
+		auto edge = tolled_index_map.left.at(a);
+		int i = source(edge, graph);
+		int j = target(edge, graph);
+		cost_type c = cost_map[edge];
+
+		cost_array tollfree_i(V), nulltoll_j(V);
+		GET_DISTANCE_MAP(graph, j, nulltoll_j);
+		GET_DISTANCE_MAP(tollfree_graph, i, tollfree_i);
+
+		big_n[a] = -numeric_limits<cost_type>::infinity();
+		LOOP(k, K) {
+			int o = commodities[k].origin;
+			int d = commodities[k].destination;
+
+			cost_type m1, m2, m3, m4;
+			m1 = tollfree_i[j] - c;
+			m2 = tollfree_o[k][j] - nulltoll_o[k][i] - c;
+			m3 = tollfree_i[d] - c - nulltoll_j[d];
+			m4 = tollfree_o[k][d] - nulltoll_o[k][i] - c - nulltoll_j[d];
+
+			big_m[k][a] = max((cost_type)0, min({ m1, m2, m3, m4 }));
+			big_n[a] = max(big_n[a], big_m[k][a]);
+		}
+	}
 }

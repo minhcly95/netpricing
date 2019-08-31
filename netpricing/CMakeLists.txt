@@ -4,12 +4,18 @@
 cmake_minimum_required (VERSION 3.8)
 
 # Add source to this project's executable.
-add_executable (netpricing
+add_executable(netpricing
 	"netpricing.cpp"
-	"netpricing.h"
 	"problem.cpp"
-	"problem.h"
-	"problem_generator.h"
-	"graph_algorithm.h")
+	"models/standard_model.cpp")
+
+target_link_libraries(netpricing
+	-lilocplex
+	-lconcert
+	-lcplex
+	-lpthread
+	-ldl)
+
+target_compile_definitions(netpricing PUBLIC -DIL_STD)
 
 # TODO: Add tests and install targets if needed.
