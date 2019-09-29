@@ -1,9 +1,8 @@
 #pragma once
 
-#include <boost/graph/graph_traits.hpp>
-
 #include "model.h"
-#include "../problem.h"
+
+struct problem;
 
 struct standard_model : public model {
 

@@ -1,18 +1,12 @@
 #include "standard_model.h"
+
 #include "../macros.h"
 
-standard_model::standard_model(IloEnv& env, const problem& prob) : model(env) {
+standard_model::standard_model(IloEnv& env, const problem& _prob) : model(env, _prob) {
 	// Typedef
 	using namespace std;
 	using namespace boost;
 	using graph_type = problem::graph_type;
-
-	// Problem information
-	int K = prob.commodities.size();
-	int V = boost::num_vertices(prob.graph);
-	int A = boost::num_edges(prob.graph);
-	int A1 = prob.tolled_index_map.size();
-	int A2 = prob.tollfree_index_map.size();
 
 	// Variables
 	x = NumVarMatrix(env, K);

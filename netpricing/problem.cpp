@@ -247,8 +247,29 @@ void problem::update_big_mn()
 			m3 = tollfree_i[d] - c - nulltoll_j[d];
 			m4 = tollfree_o[k][d] - nulltoll_o[k][i] - c - nulltoll_j[d];
 
-			big_m[k][a] = max((cost_type)0, min({ m1, m2, m3, m4 }));
+			// M has 0.001f tolerance because exact M may cause infeasibility of subproblem
+			big_m[k][a] = max((cost_type)0, min({ m1, m2, m3, m4 })) + 0.001f;
 			big_n[a] = max(big_n[a], big_m[k][a]);
 		}
 	}
+}
+
+cost_type problem::get_obj_upper_bound() const
+{
+	int V = num_vertices(graph);
+	int K = commodities.size();
+
+	cost_type sum_obj = 0;
+	LOOP(k, K) {
+		int o = commodities[k].origin;
+		int d = commodities[k].destination;
+
+		cost_array tollfree(V), nulltoll(V);
+		GET_DISTANCE_MAP(graph, o, nulltoll);
+		GET_DISTANCE_MAP(tollfree_graph, o, tollfree);
+
+		sum_obj += (tollfree[d] - nulltoll[d]) * commodities[k].demand;
+	}
+
+	return sum_obj;
 }

@@ -75,4 +75,7 @@ struct problem
 	void update();
 	void update_indices();
 	void update_big_mn();
+
+	// Utilities
+	cost_type get_obj_upper_bound() const;
 };

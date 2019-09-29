@@ -7,7 +7,8 @@ cmake_minimum_required (VERSION 3.8)
 add_executable(netpricing
 	"netpricing.cpp"
 	"problem.cpp"
-	"models/standard_model.cpp")
+	"models/standard_model.cpp"
+	"models/benders_model_original.cpp")
 
 target_link_libraries(netpricing
 	-lilocplex
