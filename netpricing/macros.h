@@ -10,6 +10,11 @@
 #define A1_TO_EDGE(prob, a) (prob).tolled_index_map.left.at(a)
 #define A2_TO_EDGE(prob, a) (prob).tollfree_index_map.left.at(a)
 
+#define EDGE_FROM_SRC_DST(prob, src, dst) boost::edge(src, dst, (prob).graph).first
+#define EDGE_TO_A(prob, e) (prob).alledges_index_map.right.at(e)
+#define EDGE_TO_A1(prob, e) (prob).tolled_index_map.right.at(e)
+#define EDGE_TO_A2(prob, e) (prob).tollfree_index_map.right.at(e)
+
 #define SRC_DST(prob, edge) int src = source((edge), (prob).graph); int dst = target((edge), (prob).graph);
 #define SRC_DST_FROM_A(prob, a) auto edge = A_TO_EDGE(prob, a); SRC_DST(prob, edge)
 #define SRC_DST_FROM_A1(prob, a) auto edge = A1_TO_EDGE(prob, a); SRC_DST(prob, edge)

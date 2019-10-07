@@ -9,7 +9,8 @@ add_executable(netpricing
 	"problem.cpp"
 	"models/standard_model.cpp"
 	"models/benders_model_original.cpp"
-	"models/benders_model_reduced.cpp")
+	"models/benders_model_reduced.cpp"
+	"models/benders_model_reduced2.cpp")
 
 target_link_libraries(netpricing
 	-lilocplex

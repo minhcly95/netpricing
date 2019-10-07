@@ -1,15 +1,16 @@
-#include "benders_model_reduced.h"
+#include "benders_model_reduced2.h"
 
 #include "../macros.h"
+#include "../graph_algorithm.h"
 #include <iostream>
 #include <chrono>
 
 using namespace std;
 using namespace boost;
 
-ILOLAZYCONSTRAINTCALLBACK1(benders_model_reduced_callback, benders_model_reduced&, bmodel) {
-	using NumArray = benders_model_reduced::NumArray;
-	using NumMatrix = benders_model_reduced::NumMatrix;
+ILOLAZYCONSTRAINTCALLBACK1(benders_model_reduced2_callback, benders_model_reduced2&, bmodel) {
+	using NumArray = benders_model_reduced2::NumArray;
+	using NumMatrix = benders_model_reduced2::NumMatrix;
 
 	IloEnv env = getEnv();
 
@@ -33,10 +34,10 @@ ILOLAZYCONSTRAINTCALLBACK1(benders_model_reduced_callback, benders_model_reduced
 	xvals.end();
 };
 
-benders_model_reduced::benders_model_reduced(IloEnv& env, const problem& _prob) :
+benders_model_reduced2::benders_model_reduced2(IloEnv& env, const problem& _prob) :
 	model(env, _prob), submodel1(env, K), subcplex1(env, K), submodel3(env), subcplex3(env), const_val_map(),
-	separate_time(0), subprob1_time(0), subprob3_time(0), separate_count(0),
-	flow_cut_count(0), toll_cut_count(0), opt_cut_count(0) {
+	separate_time(0), subprob1_time(0), subprob2_time(0), subprob3_time(0), separate_count(0),
+	flow_cut_count(0), path_cut_count(0), toll_cut_count(0), opt_cut_count(0) {
 
 	// Variables
 	v = IloNumVar(env, 0, prob.get_obj_upper_bound(), "v");
@@ -77,7 +78,7 @@ benders_model_reduced::benders_model_reduced(IloEnv& env, const problem& _prob) 
 	}
 }
 
-void benders_model_reduced::init_subproblem(IloEnv& env, const problem& prob)
+void benders_model_reduced2::init_subproblem(IloEnv& env, const problem& prob)
 {
 	// Variables and naming
 	y = NumVarMatrix(env, K);
@@ -236,7 +237,7 @@ void benders_model_reduced::init_subproblem(IloEnv& env, const problem& prob)
 	subcplex3.setOut(env.getNullStream());
 }
 
-void benders_model_reduced::update_subproblem1(const NumMatrix& xvals)
+void benders_model_reduced2::update_subproblem1(const NumMatrix& xvals)
 {
 	// Flow matrix
 	LOOP(k, K) {
@@ -257,7 +258,7 @@ void benders_model_reduced::update_subproblem1(const NumMatrix& xvals)
 	}
 }
 
-void benders_model_reduced::update_subproblem3(const NumMatrix& xvals, const NumMatrix& yvals)
+void benders_model_reduced2::update_subproblem3(const NumMatrix& xvals, const NumMatrix& yvals)
 {
 	// Equal objective
 	LOOP(k, K) {
@@ -273,7 +274,7 @@ void benders_model_reduced::update_subproblem3(const NumMatrix& xvals, const Num
 			if (yvals[k][a] < 0.5) continue;		// Not a chosen edge
 
 			auto edge = A2_TO_EDGE(prob, a);
-			rhs -= prob.cost_map[edge] * yvals[k][a];
+			rhs -= prob.cost_map[edge];
 		}
 
 		equal_obj[k].setBounds(rhs, rhs);
@@ -294,7 +295,7 @@ void benders_model_reduced::update_subproblem3(const NumMatrix& xvals, const Num
 	}
 }
 
-void benders_model_reduced::update_const_val_map() {
+void benders_model_reduced2::update_const_val_map() {
 	LOOP(k, K) {
 		LOOP(i, V) const_val_map[flow_constr[k][i].getId()] = &mu[k][i];
 		LOOP(a, A) const_val_map[dual_feas[k][a].getId()] = &f[k][a];
@@ -304,7 +305,7 @@ void benders_model_reduced::update_const_val_map() {
 	}
 }
 
-void benders_model_reduced::separate(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs) {
+void benders_model_reduced2::separate(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs) {
 	auto start = chrono::high_resolution_clock::now();
 
 	separate_inner(xvals, cut_lhs, cut_rhs);
@@ -314,7 +315,7 @@ void benders_model_reduced::separate(const NumMatrix& xvals, IloExpr& cut_lhs, I
 	++separate_count;
 }
 
-void benders_model_reduced::separate_inner(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs)
+void benders_model_reduced2::separate_inner(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs)
 {
 	IloEnv env = cplex_model.getEnv();
 
@@ -330,6 +331,13 @@ void benders_model_reduced::separate_inner(const NumMatrix& xvals, IloExpr& cut_
 	LOOP(k, K) {
 		yvals[k] = NumArray(env, A2);
 		subcplex1[k].getValues(y[k], yvals[k]);
+	}
+
+	// Cycle elimination (step 2)
+	bool is_feasible2 = separate_step2(xvals, yvals, cut_lhs, cut_rhs);
+	if (!is_feasible2) {
+		++path_cut_count;
+		return;
 	}
 
 	// Update and resolve subproblem 3
@@ -410,7 +418,7 @@ void benders_model_reduced::separate_inner(const NumMatrix& xvals, IloExpr& cut_
 	yvals.end();
 }
 
-bool benders_model_reduced::separate_step1(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs) {
+bool benders_model_reduced2::separate_step1(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs) {
 	IloEnv env = cplex_model.getEnv();
 
 	// Update and resolve subproblem 1
@@ -464,7 +472,71 @@ bool benders_model_reduced::separate_step1(const NumMatrix& xvals, IloExpr& cut_
 	return true;
 }
 
-IloCplex::Callback benders_model_reduced::attach_callback(IloCplex& cplex)
+bool benders_model_reduced2::separate_step2(const NumMatrix& xvals, const NumMatrix& yvals, IloExpr& cut_lhs, IloNum& cut_rhs) {
+	using graph_type = boost::adjacency_list<>;
+
+	LOOP(k, K) {
+		auto sub2start = chrono::high_resolution_clock::now();
+		graph_type graph(V);
+
+		// Build the graph
+		LOOP(a, A1) {
+			if (xvals[k][a] < 0.5) continue;		// Not a chosen edge
+
+			SRC_DST_FROM_A1(prob, a);
+			add_edge(src, dst, graph);
+		}
+		LOOP(a, A2) {
+			if (yvals[k][a] < 0.5) continue;		// Not a chosen edge
+
+			SRC_DST_FROM_A2(prob, a);
+			add_edge(src, dst, graph);
+		}
+
+		// Find a tree path
+		auto tree_path = get_tree_path(prob.commodities[k].origin, prob.commodities[k].destination, graph);
+
+		auto sub2end = chrono::high_resolution_clock::now();
+		subprob2_time += chrono::duration<double>(sub2end - sub2start).count();
+
+		// If the path has fewer edges, there exists a cycle
+		if (tree_path.size() != num_edges(graph)) {
+			// PATH FEASIBILITY CUT
+			// Rescale mu
+			LOOP(k, K) LOOP(i, V)
+				mu[k][i] = -mu[k][i];
+
+			// Cut formulation
+			// Right-hand side
+			cut_rhs -= mu[k][prob.commodities[k].origin];
+			cut_rhs += mu[k][prob.commodities[k].destination];
+
+			// Left-hand side
+			LOOP(a, A1) {
+				SRC_DST_FROM_A1(prob, a);
+				cost_type cost = prob.cost_map[edge];
+				cut_lhs.setLinearCoef(x[k][a], -mu[k][src] + mu[k][dst] - cost);
+			}
+
+			// Tree path data
+			for (auto& tree_edge : tree_path) {
+				auto edge = EDGE_FROM_SRC_DST(prob, source(tree_edge, graph), target(tree_edge, graph));
+				cut_rhs -= prob.cost_map[edge];
+
+				if (prob.is_tolled_map[edge]) {
+					int a1 = EDGE_TO_A1(prob, edge);
+					cut_rhs -= prob.big_n[a1];
+					cut_lhs -= (prob.big_n[a1] * x[k][a1]);
+				}
+			}
+			return false;
+		}
+	}
+
+	return true;
+}
+
+IloCplex::Callback benders_model_reduced2::attach_callback(IloCplex& cplex)
 {
-	return cplex.use(benders_model_reduced_callback(cplex_model.getEnv(), *this));
+	return cplex.use(benders_model_reduced2_callback(cplex_model.getEnv(), *this));
 }

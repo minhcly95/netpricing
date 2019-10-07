@@ -5,7 +5,7 @@
 
 struct problem;
 
-struct benders_model_reduced : public model {
+struct benders_model_reduced2 : public model {
 
 	using NumVarArray = IloNumVarArray;
 	using NumVarMatrix = IloArray<NumVarArray>;
@@ -56,13 +56,15 @@ struct benders_model_reduced : public model {
 	// Utilities
 	double separate_time;
 	double subprob1_time;
+	double subprob2_time;
 	double subprob3_time;
 	int separate_count;
 	int flow_cut_count;
+	int path_cut_count;
 	int toll_cut_count;
 	int opt_cut_count;
 
-	benders_model_reduced(IloEnv& env, const problem& prob);
+	benders_model_reduced2(IloEnv& env, const problem& prob);
 
 	void init_subproblem(IloEnv& env, const problem& prob);
 	void update_subproblem1(const NumMatrix& xvals);
@@ -73,6 +75,7 @@ struct benders_model_reduced : public model {
 	void separate(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs);
 	void separate_inner(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs);
 	bool separate_step1(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs);
+	bool separate_step2(const NumMatrix& xvals, const NumMatrix& yvals, IloExpr& cut_lhs, IloNum& cut_rhs);
 
 	IloCplex::Callback attach_callback(IloCplex& cplex);
 };
