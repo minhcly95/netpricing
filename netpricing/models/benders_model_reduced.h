@@ -5,7 +5,7 @@
 
 struct problem;
 
-struct benders_model_original : public model {
+struct benders_model_reduced : public model {
 
 	using NumVarArray = IloNumVarArray;
 	using NumVarMatrix = IloArray<NumVarArray>;
@@ -16,9 +16,12 @@ struct benders_model_original : public model {
 	using RangeArray = IloRangeArray;
 	using RangeMatrix = IloArray<RangeArray>;
 
-	// Subproblem
-	IloModel submodel;
-	IloCplex subcplex;
+	// Subproblems
+	IloArray<IloModel> submodel1;
+	IloArray<IloCplex> subcplex1;
+
+	IloModel submodel3;
+	IloCplex subcplex3;
 
 	// Variables
 	IloNumVar v;
@@ -30,7 +33,9 @@ struct benders_model_original : public model {
 
 	// Objective and constraints
 	IloObjective obj;
-	IloObjective subobj;
+	IloArray<IloObjective> subobj1;
+	IloObjective subobj3;
+
 	RangeMatrix flow_constr;
 	RangeMatrix dual_feas;
 	RangeArray equal_obj;
@@ -53,14 +58,16 @@ struct benders_model_original : public model {
 	double subprob_time;
 	int separate_count;
 
-	benders_model_original(IloEnv& env, const problem& prob);
+	benders_model_reduced(IloEnv& env, const problem& prob);
 
 	void init_subproblem(IloEnv& env, const problem& prob);
-	void update_subproblem(const NumMatrix& xvals);
+	void update_subproblem1(const NumMatrix& xvals);
+	void update_subproblem3(const NumMatrix& xvals, const NumMatrix& yvals);
 
 	void update_const_val_map();
 
 	void separate(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs);
+	bool separate_step1(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs);
 
 	IloCplex::Callback attach_callback(IloCplex& cplex);
 };

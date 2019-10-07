@@ -1,4 +1,4 @@
-#include "benders_model_original.h"
+#include "benders_model_reduced.h"
 
 #include "../macros.h"
 #include <iostream>
@@ -7,9 +7,9 @@
 using namespace std;
 using namespace boost;
 
-ILOLAZYCONSTRAINTCALLBACK1(benders_model_original_callback, benders_model_original&, bmodel) {
-	using NumArray = benders_model_original::NumArray;
-	using NumMatrix = benders_model_original::NumMatrix;
+ILOLAZYCONSTRAINTCALLBACK1(benders_model_reduced_callback, benders_model_reduced&, bmodel) {
+	using NumArray = benders_model_reduced::NumArray;
+	using NumMatrix = benders_model_reduced::NumMatrix;
 
 	IloEnv env = getEnv();
 
@@ -33,8 +33,8 @@ ILOLAZYCONSTRAINTCALLBACK1(benders_model_original_callback, benders_model_origin
 	xvals.end();
 };
 
-benders_model_original::benders_model_original(IloEnv& env, const problem& _prob) :
-	model(env, _prob), submodel(env), subcplex(env), const_val_map(),
+benders_model_reduced::benders_model_reduced(IloEnv& env, const problem& _prob) :
+	model(env, _prob), submodel1(env, K), subcplex1(env, K), submodel3(env), subcplex3(env), const_val_map(),
 	separate_time(0), subprob_time(0), separate_count(0) {
 
 	// Variables
@@ -76,7 +76,7 @@ benders_model_original::benders_model_original(IloEnv& env, const problem& _prob
 	}
 }
 
-void benders_model_original::init_subproblem(IloEnv& env, const problem& prob)
+void benders_model_reduced::init_subproblem(IloEnv& env, const problem& prob)
 {
 	// Variables and naming
 	y = NumVarMatrix(env, K);
@@ -117,9 +117,14 @@ void benders_model_original::init_subproblem(IloEnv& env, const problem& prob)
 		t[a].setName(name);
 	}
 
+	// SUBPROBLEM 1
+
 	// Objective
-	subobj = IloMaximize(env);
-	LOOP(k, K) LOOP(a, A1) subobj.setLinearCoef(tx[k][a], prob.commodities[k].demand);
+	subobj1 = IloArray<IloObjective>(env, K);
+	LOOP(k, K) {
+		subobj1[k] = IloMinimize(env);
+		LOOP(a, A2) subobj1[k].setLinearCoef(y[k][a], prob.cost_map[A2_TO_EDGE(prob, a)]);
+	}
 
 	// Flow constraints
 	flow_constr = RangeMatrix(env, K);
@@ -139,6 +144,25 @@ void benders_model_original::init_subproblem(IloEnv& env, const problem& prob)
 		LOOP(k, K) flow_constr[k][dst].setLinearCoef(y[k][a], -1);
 	}
 
+	// Add to model
+	LOOP(k, K) {
+		submodel1[k] = IloModel(env);
+		submodel1[k].add(subobj1[k]);
+		submodel1[k].add(flow_constr[k]);
+
+		subcplex1[k] = IloCplex(env);
+		subcplex1[k].extract(submodel1[k]);
+		subcplex1[k].setParam(IloCplex::PreInd, IloFalse);
+		subcplex1[k].setParam(IloCplex::RootAlg, IloCplex::Network);
+		subcplex1[k].setOut(env.getNullStream());
+	}
+
+	// SUBPROBLEM 3
+
+	// Objective
+	subobj3 = IloMaximize(env);
+	LOOP(k, K) LOOP(a, A1) subobj3.setLinearCoef(tx[k][a], prob.commodities[k].demand);
+
 	// Dual feasibility
 	dual_feas = RangeMatrix(env, K);
 	LOOP(k, K) dual_feas[k] = RangeArray(env, A);
@@ -155,13 +179,8 @@ void benders_model_original::init_subproblem(IloEnv& env, const problem& prob)
 		}
 	}
 
-	// Equal objective (y-only)
-	equal_obj = RangeArray(env, K, 0, 0);	// Bounds depend on x
-	LOOP(a, A2) {
-		auto edge = A2_TO_EDGE(prob, a);
-		cost_type cost = prob.cost_map[edge];
-		LOOP(k, K) equal_obj[k].setLinearCoef(y[k][a], cost);
-	}
+	// Equal objective (xy-excluded)
+	equal_obj = RangeArray(env, K, 0, 0);	// Bounds depend on x and y
 	LOOP(a, A1) LOOP(k, K) equal_obj[k].setLinearCoef(tx[k][a], 1);
 	LOOP(k, K) {
 		equal_obj[k].setLinearCoef(lambda[k][prob.commodities[k].origin], -1);
@@ -201,23 +220,22 @@ void benders_model_original::init_subproblem(IloEnv& env, const problem& prob)
 	}
 		
 	// Add to model
-	submodel.add(subobj);
+	submodel3.add(subobj3);
 	LOOP(k, K) {
-		submodel.add(flow_constr[k]);
-		submodel.add(dual_feas[k]);
-		submodel.add(equal_obj[k]);
-		submodel.add(bilinear1[k]);
-		submodel.add(bilinear2[k]);
-		submodel.add(bilinear3[k]);
+		submodel3.add(dual_feas[k]);
+		submodel3.add(equal_obj[k]);
+		submodel3.add(bilinear1[k]);
+		submodel3.add(bilinear2[k]);
+		submodel3.add(bilinear3[k]);
 	}
-	subcplex.extract(submodel);
-	subcplex.setParam(IloCplex::PreInd, IloFalse);
-	subcplex.setParam(IloCplex::RootAlg, IloCplex::Dual);
-	subcplex.setParam(IloCplex::Param::Simplex::Tolerances::Feasibility, 1e-4);
-	subcplex.setOut(env.getNullStream());
+	subcplex3.extract(submodel3);
+	subcplex3.setParam(IloCplex::PreInd, IloFalse);
+	subcplex3.setParam(IloCplex::RootAlg, IloCplex::Dual);
+	subcplex3.setParam(IloCplex::Param::Simplex::Tolerances::Feasibility, 1e-4);
+	subcplex3.setOut(env.getNullStream());
 }
 
-void benders_model_original::update_subproblem(const NumMatrix& xvals)
+void benders_model_reduced::update_subproblem1(const NumMatrix& xvals)
 {
 	// Flow matrix
 	LOOP(k, K) {
@@ -236,7 +254,10 @@ void benders_model_original::update_subproblem(const NumMatrix& xvals)
 
 		LOOP(i, V) flow_constr[k][i].setBounds(supply[i], supply[i]);
 	}
+}
 
+void benders_model_reduced::update_subproblem3(const NumMatrix& xvals, const NumMatrix& yvals)
+{
 	// Equal objective
 	LOOP(k, K) {
 		cost_type rhs = 0;
@@ -246,6 +267,12 @@ void benders_model_original::update_subproblem(const NumMatrix& xvals)
 
 			auto edge = A1_TO_EDGE(prob, a);
 			rhs -= prob.cost_map[edge];
+		}
+		LOOP(a, A2) {
+			if (yvals[k][a] < 0.5) continue;		// Not a chosen edge
+
+			auto edge = A2_TO_EDGE(prob, a);
+			rhs -= prob.cost_map[edge] * yvals[k][a];
 		}
 
 		equal_obj[k].setBounds(rhs, rhs);
@@ -266,7 +293,7 @@ void benders_model_original::update_subproblem(const NumMatrix& xvals)
 	}
 }
 
-void benders_model_original::update_const_val_map() {
+void benders_model_reduced::update_const_val_map() {
 	LOOP(k, K) {
 		LOOP(i, V) const_val_map[flow_constr[k][i].getId()] = &mu[k][i];
 		LOOP(a, A) const_val_map[dual_feas[k][a].getId()] = &f[k][a];
@@ -276,47 +303,61 @@ void benders_model_original::update_const_val_map() {
 	}
 }
 
-void benders_model_original::separate(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs)
+void benders_model_reduced::separate(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs)
 {
 	auto start = chrono::high_resolution_clock::now();
 
-	IloEnv env = submodel.getEnv();
+	IloEnv env = cplex_model.getEnv();
+	NumMatrix yvals(env, K);
+	bool is_feasible3;
 
-	// Update and resolve subproblem
-	update_subproblem(xvals);
+	// Update and resolve subproblem 1
+	bool is_feasible1 = separate_step1(xvals, cut_lhs, cut_rhs);
+	if (!is_feasible1) {
+		goto separate_end;
+	}
 
-	auto substart = chrono::high_resolution_clock::now();
-	bool is_feasible = subcplex.solve();
-	auto subend = chrono::high_resolution_clock::now();
+	// Extract y values
+	LOOP(k, K) {
+		yvals[k] = NumArray(env, A2);
+		subcplex1[k].getValues(y[k], yvals[k]);
+	}
 
-	// Extract dual information
-	if (is_feasible) {
+	// Update and resolve subproblem 3
+	update_subproblem3(xvals, yvals);
+	is_feasible3 = subcplex3.solve();
+
+	if (is_feasible3) {
 		// Primal feasible, get dual values
 		LOOP(k, K) {
-			subcplex.getDuals(mu[k], flow_constr[k]);
-			subcplex.getDuals(f[k], dual_feas[k]);
-			subcplex.getDuals(alpha[k], bilinear1[k]);
-			subcplex.getDuals(beta[k], bilinear2[k]);
+			subcplex3.getDuals(f[k], dual_feas[k]);
+			subcplex3.getDuals(alpha[k], bilinear1[k]);
+			subcplex3.getDuals(beta[k], bilinear2[k]);
 		}
-		subcplex.getDuals(rho, equal_obj);
+		subcplex3.getDuals(rho, equal_obj);
 	}
 	else {
 		// Primal infeasible, get dual Farkas certificate (dual extreme ray)
 		update_const_val_map();
 
-		IloConstraintArray constArray(env, 0);
-		NumArray y(env, 0);
+		IloConstraintArray const_array(env, 0);
+		NumArray dual_vals(env, 0);
 
-		subcplex.dualFarkas(constArray, y);
+		subcplex3.dualFarkas(const_array, dual_vals);
 
-		for (int i = 0; i < constArray.getSize(); i++) {
-			IloNum* val_ref = const_val_map[constArray[i].getId()];
+		for (int i = 0; i < const_array.getSize(); i++) {
+			IloNum* val_ref = const_val_map[const_array[i].getId()];
 			if (val_ref)
-				(*val_ref) = -y[i];
+				(*val_ref) = -dual_vals[i];
 		}
 
-		constArray.end();
-		y.end();
+		const_array.end();
+		dual_vals.end();
+	}
+
+	// Rescale mu
+	LOOP(k, K) LOOP(i, V) {
+		mu[k][i] *= -rho[k];
 	}
 
 	// Cut formulation
@@ -343,18 +384,73 @@ void benders_model_original::separate(const NumMatrix& xvals, IloExpr& cut_lhs, 
 	}
 
 	// Optimality cut
-	if (is_feasible) {
+	if (is_feasible3) {
 		cut_lhs.setLinearCoef(v, -1);
 	}
 
+	// Clean up
+	LOOP(k, K) yvals[k].end();
+
 	// Utilities
+separate_end:
+	yvals.end();
+
 	auto end = chrono::high_resolution_clock::now();
 	separate_time += chrono::duration<double>(end - start).count();
-	subprob_time += chrono::duration<double>(subend - substart).count();
 	++separate_count;
 }
 
-IloCplex::Callback benders_model_original::attach_callback(IloCplex& cplex)
+bool benders_model_reduced::separate_step1(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs) {
+	IloEnv env = cplex_model.getEnv();
+
+	// Update and resolve subproblem 1
+	update_subproblem1(xvals);
+	LOOP(k, K) {
+		bool is_feasible = subcplex1[k].solve();
+		if (!is_feasible) {
+			// FLOW FEASIBILITY CUT
+			// Extract dual ray
+			update_const_val_map();
+
+			IloConstraintArray const_array(env, 0);
+			NumArray dual_vals(env, 0);
+
+			subcplex1[k].dualFarkas(const_array, dual_vals);
+
+			for (int i = 0; i < const_array.getSize(); i++) {
+				IloNum* val_ref = const_val_map[const_array[i].getId()];
+				if (val_ref)
+					(*val_ref) = -dual_vals[i];
+			}
+
+			const_array.end();
+			dual_vals.end();
+
+			// Cut formulation
+			// Right-hand side
+			cut_rhs -= mu[k][prob.commodities[k].origin];
+			cut_rhs += mu[k][prob.commodities[k].destination];
+
+			// Left-hand side
+			LOOP(a, A1) {
+				SRC_DST_FROM_A1(prob, a);
+				cut_lhs.setLinearCoef(x[k][a], -mu[k][src] + mu[k][dst]);
+			}
+
+			return false;
+		}
+	}
+
+	// All feasible, extract dual values
+	LOOP(k, K) {
+		// Note that the sign of mu here is flipped
+		subcplex1[k].getDuals(mu[k], flow_constr[k]);
+	}
+
+	return true;
+}
+
+IloCplex::Callback benders_model_reduced::attach_callback(IloCplex& cplex)
 {
-	return cplex.use(benders_model_original_callback(cplex_model.getEnv(), *this));
+	return cplex.use(benders_model_reduced_callback(cplex_model.getEnv(), *this));
 }

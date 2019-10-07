@@ -248,7 +248,7 @@ void problem::update_big_mn()
 			m4 = tollfree_o[k][d] - nulltoll_o[k][i] - c - nulltoll_j[d];
 
 			// M has 0.001f tolerance because exact M may cause infeasibility of subproblem
-			big_m[k][a] = max((cost_type)0, min({ m1, m2, m3, m4 })) + 0.001f;
+			big_m[k][a] = max((cost_type)0, min({ m1, m2, m3, m4 }));
 			big_n[a] = max(big_n[a], big_m[k][a]);
 		}
 	}

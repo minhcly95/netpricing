@@ -14,5 +14,6 @@
 #include "models/model.h"
 #include "models/standard_model.h"
 #include "models/benders_model_original.h"
+#include "models/benders_model_reduced.h"
 
 #include "macros.h"
