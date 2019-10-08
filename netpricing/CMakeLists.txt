@@ -3,6 +3,9 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+find_package(Boost REQUIRED COMPONENTS program_options)
+include_directories(${Boost_INCLUDE_DIRS})
+
 # Add source to this project's executable.
 add_executable(netpricing
 	"netpricing.cpp"
@@ -18,7 +21,8 @@ target_link_libraries(netpricing
 	-lconcert
 	-lcplex
 	-lpthread
-	-ldl)
+	-ldl
+	${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 target_compile_definitions(netpricing PUBLIC -DIL_STD)
 
