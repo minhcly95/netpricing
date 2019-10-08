@@ -6,6 +6,7 @@
 
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/erdos_renyi_generator.hpp>
+#include <boost/graph/copy.hpp>
 
 #include "problem.h"
 #include "graph_algorithm.h"
@@ -115,7 +116,7 @@ template<class random_engine_type = std::default_random_engine>
 boost::adjacency_list<> random_graph(int num_verts, int num_edges,
 								 random_engine_type& random_engine = default_engine) {
 
-	using graph_type = boost::adjacency_list<>;
+	using graph_type = boost::adjacency_list<boost::setS>;
 	using ergen = boost::erdos_renyi_iterator<random_engine_type, graph_type>;
 
 	graph_type graph;
@@ -126,7 +127,9 @@ boost::adjacency_list<> random_graph(int num_verts, int num_edges,
 		is_connected = is_strongly_connected(graph);
 	} while (!is_connected);
 
-	return graph;
+	boost::adjacency_list<> output_graph;
+	boost::copy_graph(graph, output_graph);
+	return output_graph;
 }
 
 

@@ -3,6 +3,7 @@
 
 #include "netpricing.h"
 #include <chrono>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
 
 using namespace std;
 using namespace boost;
@@ -25,10 +26,10 @@ int main()
 {
 	auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	auto random_engine = default_random_engine(seed);
-	problem prob = random_problem(50, 200, 20, 0.2f, random_engine);
+	problem prob = random_problem(100, 400, 75, 0.2f, random_engine);
 	//problem prob = std::move(problem::read_from_json("../../../../resources/problems/g10-4.json")[0]);
 
-	prob.write_to_json("current.lp");
+	prob.write_to_json("current.json");
 
 	IloEnv env;
 
@@ -48,40 +49,64 @@ int main()
 		env.out() << "Solution value = " << scplex.getObjValue() << endl;
 		double svalue = scplex.getObjValue();
 
+		//cout << endl << "--------------------------------------" << endl;
+		//cout << "BENDERS MODEL" << endl;
+
+		//benders_model_reduced2 bmodel(env, prob);
+		////print_src_dst(prob, bmodel);
+
+		//IloCplex bcplex(bmodel.cplex_model);
+		//auto cb = bmodel.attach_callback(bcplex);
+		////cplex.setParam(IloCplex::PreInd, IloFalse);
+		//bcplex.setParam(IloCplex::Threads, 8);
+
+		//if (!bcplex.solve()) {
+		//	env.error() << "Failed to optimize LP." << endl;
+		//	throw(-1);
+		//}
+
+		//env.out() << "Solution status = " << bcplex.getStatus() << endl;
+		//env.out() << "Solution value = " << bcplex.getObjValue() << endl;
+		//double bvalue = bcplex.getObjValue();
+
+		//cb.end();
+
 		cout << endl << "--------------------------------------" << endl;
-		cout << "BENDERS MODEL" << endl;
+		cout << "VALUE FUNC MODEL" << endl;
 
-		benders_model_reduced2 bmodel(env, prob);
-		//print_src_dst(prob, bmodel);
+		value_func_model vmodel(env, prob);
+		//print_src_dst(prob, vmodel);
 
-		IloCplex bcplex(bmodel.cplex_model);
-		auto cb = bmodel.attach_callback(bcplex);
+		IloCplex vcplex(vmodel.cplex_model);
+		auto cb = vmodel.attach_callback(vcplex);
 		//cplex.setParam(IloCplex::PreInd, IloFalse);
-		//cplex.setParam(IloCplex::Threads, 1);
+		vcplex.setParam(IloCplex::Threads, 8);
 
-		if (!bcplex.solve()) {
+		if (!vcplex.solve()) {
 			env.error() << "Failed to optimize LP." << endl;
 			throw(-1);
 		}
 
-		env.out() << "Solution status = " << bcplex.getStatus() << endl;
-		env.out() << "Solution value = " << bcplex.getObjValue() << endl;
-		double bvalue = bcplex.getObjValue();
+		env.out() << "Solution status = " << vcplex.getStatus() << endl;
+		env.out() << "Solution value = " << vcplex.getObjValue() << endl;
+		double vvalue = vcplex.getObjValue();
 
 		cb.end();
 
 		cout << endl << "--------------------------------------" << endl;
-		cout << "S: " << svalue << " - B: " << bvalue << endl;
-		cout << "SEP: Total " << bmodel.separate_count <<
-			"    F " << bmodel.flow_cut_count <<
-			"    P " << bmodel.path_cut_count <<
-			"    T " << bmodel.toll_cut_count <<
-			"    O " << bmodel.opt_cut_count << endl <<
-			"TIME: Total " << bmodel.separate_time << " s" <<
-			"    Avg " << (bmodel.separate_time * 1000 / bmodel.separate_count) << " ms" <<
-			"    Sub1 " << (bmodel.subprob1_time * 100 / bmodel.separate_time) << "%" <<
-			"    Sub2 " << (bmodel.subprob2_time * 100 / bmodel.separate_time) << "%" <<
-			"    Sub3 " << (bmodel.subprob3_time * 100 / bmodel.separate_time) << "%" << endl;
+		cout << "S: " << svalue << " - V: " << vvalue << endl;
+		cout << "SEP: Total " << vmodel.separate_count <<
+		//	"    F " << bmodel.flow_cut_count <<
+		//	"    P " << bmodel.path_cut_count <<
+		//	"    T " << bmodel.toll_cut_count <<
+		//	"    O " << bmodel.opt_cut_count <<
+			endl <<
+			"TIME: Total " << vmodel.separate_time << " s" <<
+			"    Avg " << (vmodel.separate_time * 1000 / vmodel.separate_count) << " ms" <<
+			"    Sub " << (vmodel.subprob_time * 100 / vmodel.separate_time) << "%" <<
+		//	"    Sub2 " << (bmodel.subprob2_time * 100 / bmodel.separate_time) << "%" <<
+		//	"    Sub3 " << (bmodel.subprob3_time * 100 / bmodel.separate_time) << "%" <<
+			endl;
 	}
 	catch (const IloException& e) {
 		cerr << "Exception caught: " << e << endl;
