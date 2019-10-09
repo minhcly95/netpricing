@@ -26,11 +26,34 @@ void print_src_dst(P& prob, T& model) {
 	cout << endl;
 }
 
-string run_standard_model(IloEnv env, problem& prob);
-string run_benders_model0(IloEnv env, problem& prob);
-string run_benders_model1(IloEnv env, problem& prob);
-string run_benders_model2(IloEnv env, problem& prob);
-string run_value_func_model(IloEnv env, problem& prob);
+template <class model_type>
+string run_model(IloEnv env, problem& prob, string model_name) {
+	try {
+		cout << "--------------------------------------" << endl;
+		cout << model_name << endl;
+
+		model_type model(env, prob);
+
+		IloCplex cplex = model.get_cplex();
+		cplex.setParam(IloCplex::ClockType, 2);
+		cplex.setParam(IloCplex::Threads, 8);
+
+		if (!model.solve()) {
+			env.error() << "Failed to optimize LP." << endl;
+			throw(-1);
+		}
+
+		env.out() << "Solution status = " << cplex.getStatus() << endl;
+		env.out() << "Solution value = " << cplex.getObjValue() << endl;
+		string report = model.get_report();
+
+		model.end();
+		return report;
+	}
+	catch (const IloException & e) {
+		cerr << "Exception caught: " << e << endl;
+	}
+}
 
 int main(int argc, char* argv[])
 {
@@ -78,22 +101,22 @@ int main(int argc, char* argv[])
 	ostringstream report;
 
 	if (vm.count("standard")) {
-		report << "STANDARD:" << endl << run_standard_model(env, *prob);
+		report << "STANDARD:" << endl << run_model<standard_model>(env, *prob, "STANDARD MODEL");
 	}
 	if (vm.count("benders")) {
 		report << "BENDERS:" << endl;
 		switch (vm["benders"].as<int>())
 		{
-		case 0: report << run_benders_model0(env, *prob); break;
-		case 1: report << run_benders_model1(env, *prob); break;
-		case 2: report << run_benders_model2(env, *prob); break;
+		case 0: report << run_model<benders_model_original>(env, *prob, "BENDERS MODEL 0"); break;
+		case 1: report << run_model<benders_model_reduced>(env, *prob, "BENDERS MODEL 1"); break;
+		case 2: report << run_model<benders_model_reduced2>(env, *prob, "BENDERS MODEL 2"); break;
 		default:
 			break;
 		}
 		
 	}
 	if (vm.count("valuefunc")) {
-		report << "VALUEFUNC:" << endl << run_value_func_model(env, *prob);
+		report << "VALUEFUNC:" << endl << run_model<value_func_model>(env, *prob, "VALUE FUNC MODEL");
 	}
 
 	// Print report
@@ -104,165 +127,4 @@ int main(int argc, char* argv[])
 	env.end();
 
 	return 0;
-}
-
-template <class model_type>
-pair<model_type, IloCplex> run_model_with_callback(IloEnv env, problem& prob) {
-	model_type model(env, prob);
-
-	IloCplex cplex(model.cplex_model);
-
-	auto cb = model.attach_callback(cplex);
-	cplex.setParam(IloCplex::Threads, 8);
-	cplex.setParam(IloCplex::ClockType, 2);
-	cplex.resetTime();
-
-	if (!cplex.solve()) {
-		env.error() << "Failed to optimize LP." << endl;
-		throw(-1);
-	}
-
-	env.out() << "Solution status = " << cplex.getStatus() << endl;
-	env.out() << "Solution value = " << cplex.getObjValue() << endl;
-
-	cb.end();
-
-	return make_pair(model, cplex);
-}
-
-string run_standard_model(IloEnv env, problem& prob) {
-	try {
-		cout << "--------------------------------------" << endl;
-		cout << "STANDARD MODEL" << endl;
-
-		standard_model model(env, prob);
-
-		IloCplex cplex(model.cplex_model);
-		cplex.setParam(IloCplex::ClockType, 2);
-		cplex.resetTime();
-
-		if (!cplex.solve()) {
-			env.error() << "Failed to optimize LP." << endl;
-			throw(-1);
-		}
-
-		env.out() << "Solution status = " << cplex.getStatus() << endl;
-		env.out() << "Solution value = " << cplex.getObjValue() << endl;
-		double value = cplex.getObjValue();
-
-		ostringstream ss;
-		ss << "OBJ: " << value << endl <<
-			"TIME: " << cplex.getTime() << " s" << endl;
-
-		return ss.str();
-	}
-	catch (const IloException & e) {
-		cerr << "Exception caught: " << e << endl;
-	}
-}
-
-string run_benders_model0(IloEnv env, problem& prob) {
-	try {
-		cout << endl << "--------------------------------------" << endl;
-		cout << "BENDERS MODEL 0" << endl;
-
-		auto model_pair = run_model_with_callback<benders_model_original>(env, prob);
-		double value = model_pair.second.getObjValue();
-		auto model = model_pair.first;
-
-		ostringstream ss;
-		ss << "OBJ: " << value << endl <<
-			"TIME: " << model_pair.second.getTime() << " s" <<
-			"    Sep " << model.separate_time << " s" <<
-			"    Avg " << (model.separate_time * 1000 / model.separate_count) << " ms" <<
-			"    Sub " << (model.subprob_time * 100 / model.separate_time) << "%" << endl <<
-			"SEP: Total " << model.separate_count << endl;
-
-		return ss.str();
-	}
-	catch (const IloException & e) {
-		cerr << "Exception caught: " << e << endl;
-	}
-}
-
-string run_benders_model1(IloEnv env, problem& prob) {
-	try {
-		cout << endl << "--------------------------------------" << endl;
-		cout << "BENDERS MODEL 1" << endl;
-
-		auto model_pair = run_model_with_callback<benders_model_reduced>(env, prob);
-		double value = model_pair.second.getObjValue();
-		auto model = model_pair.first;
-
-		ostringstream ss;
-		ss << "OBJ: " << value << endl <<
-			"TIME: " << model_pair.second.getTime() << " s" <<
-			"    Sep " << model.separate_time << " s" <<
-			"    Avg " << (model.separate_time * 1000 / model.separate_count) << " ms" <<
-			"    Sub1 " << (model.subprob1_time * 100 / model.separate_time) << "%" <<
-			"    Sub3 " << (model.subprob3_time * 100 / model.separate_time) << "%" << endl <<
-			"SEP: Total " << model.separate_count <<
-			"    F " << model.flow_cut_count <<
-			"    T " << model.toll_cut_count <<
-			"    O " << model.opt_cut_count << endl;
-
-		return ss.str();
-	}
-	catch (const IloException & e) {
-		cerr << "Exception caught: " << e << endl;
-	}
-}
-
-string run_benders_model2(IloEnv env, problem& prob) {
-	try {
-		cout << endl << "--------------------------------------" << endl;
-		cout << "BENDERS MODEL 2" << endl;
-
-		auto model_pair = run_model_with_callback<benders_model_reduced2>(env, prob);
-		double value = model_pair.second.getObjValue();
-		auto model = model_pair.first;
-
-		ostringstream ss;
-		ss << "OBJ: " << value << endl <<
-			"TIME: " << model_pair.second.getTime() << " s" <<
-			"    Sep " << model.separate_time << " s" <<
-			"    Avg " << (model.separate_time * 1000 / model.separate_count) << " ms" <<
-			"    Sub1 " << (model.subprob1_time * 100 / model.separate_time) << "%" <<
-			"    Sub2 " << (model.subprob2_time * 100 / model.separate_time) << "%" <<
-			"    Sub3 " << (model.subprob3_time * 100 / model.separate_time) << "%" << endl <<
-			"SEP: Total " << model.separate_count <<
-			"    F " << model.flow_cut_count <<
-			"    P " << model.path_cut_count <<
-			"    T " << model.toll_cut_count <<
-			"    O " << model.opt_cut_count << endl;
-
-		return ss.str();
-	}
-	catch (const IloException & e) {
-		cerr << "Exception caught: " << e << endl;
-	}
-}
-
-string run_value_func_model(IloEnv env, problem& prob) {
-	try {
-		cout << endl << "--------------------------------------" << endl;
-		cout << "VALUE FUNC MODEL" << endl;
-
-		auto model_pair = run_model_with_callback<value_func_model>(env, prob);
-		double value = model_pair.second.getObjValue();
-		auto model = model_pair.first;
-
-		ostringstream ss;
-		ss << "OBJ: " << value << endl <<
-			"TIME: " << model_pair.second.getTime() << " s" <<
-			"    Sep " << model.separate_time << " s" <<
-			"    Avg " << (model.separate_time * 1000 / model.separate_count) << " ms" <<
-			"    Sub " << (model.subprob_time * 100 / model.separate_time) << "%" << endl <<
-			"SEP: Total " << model.separate_count << endl;
-
-		return ss.str();
-	}
-	catch (const IloException & e) {
-		cerr << "Exception caught: " << e << endl;
-	}
 }

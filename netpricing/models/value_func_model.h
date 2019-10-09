@@ -5,7 +5,7 @@
 
 struct problem;
 
-struct value_func_model : public model {
+struct value_func_model : public model_with_callback {
 
 	using NumVarArray = IloNumVarArray;
 	using NumVarMatrix = IloArray<NumVarArray>;
@@ -44,6 +44,10 @@ struct value_func_model : public model {
 	void separate_inner(const NumMatrix& zvals, const NumArray& tvals, std::vector<std::pair<IloExpr, IloNum>>& cuts);
 
 	IloCplex::Callback attach_callback(IloCplex& cplex);
+
+	// Inherited via model_with_callback
+	virtual std::string get_report() override;
+	virtual IloCplex::Callback attach_callback() override;
 };
 
 

@@ -2,6 +2,7 @@
 
 #include "../macros.h"
 #include <iostream>
+#include <sstream>
 #include <chrono>
 
 using namespace std;
@@ -34,7 +35,7 @@ ILOLAZYCONSTRAINTCALLBACK1(benders_model_original_callback, benders_model_origin
 };
 
 benders_model_original::benders_model_original(IloEnv& env, const problem& _prob) :
-	model(env, _prob), submodel(env), subcplex(env), const_val_map(),
+	model_with_callback(env, _prob), submodel(env), subcplex(env), const_val_map(),
 	separate_time(0), subprob_time(0), separate_count(0) {
 
 	// Variables
@@ -60,7 +61,7 @@ benders_model_original::benders_model_original(IloEnv& env, const problem& _prob
 	LOOP(k, K) cplex_model.add(x[k]);
 
 	// Init subproblem
-	init_subproblem(env, prob);
+	init_subproblem();
 
 	// Dual values
 	mu = NumMatrix(env, K);
@@ -76,7 +77,7 @@ benders_model_original::benders_model_original(IloEnv& env, const problem& _prob
 	}
 }
 
-void benders_model_original::init_subproblem(IloEnv& env, const problem& prob)
+void benders_model_original::init_subproblem()
 {
 	// Variables and naming
 	y = NumVarMatrix(env, K);
@@ -280,8 +281,6 @@ void benders_model_original::separate(const NumMatrix& xvals, IloExpr& cut_lhs, 
 {
 	auto start = chrono::high_resolution_clock::now();
 
-	IloEnv env = submodel.getEnv();
-
 	// Update and resolve subproblem
 	update_subproblem(xvals);
 
@@ -354,7 +353,20 @@ void benders_model_original::separate(const NumMatrix& xvals, IloExpr& cut_lhs, 
 	++separate_count;
 }
 
-IloCplex::Callback benders_model_original::attach_callback(IloCplex& cplex)
+std::string benders_model_original::get_report()
 {
-	return cplex.use(benders_model_original_callback(cplex_model.getEnv(), *this));
+	ostringstream ss;
+	ss << "OBJ: " << cplex.getObjValue() << endl <<
+		"TIME: " << cplex.getTime() << " s" <<
+		"    Sep " << separate_time << " s" <<
+		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
+		"    Sub " << (subprob_time * 100 / separate_time) << "%" << endl <<
+		"SEP: Total " << separate_count << endl;
+
+	return ss.str();
+}
+
+IloCplex::Callback benders_model_original::attach_callback()
+{
+	return cplex.use(benders_model_original_callback(env, *this));
 }

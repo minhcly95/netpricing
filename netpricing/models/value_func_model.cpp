@@ -2,6 +2,7 @@
 
 #include "../macros.h"
 #include <iostream>
+#include <sstream>
 #include <chrono>
 
 #include <boost/graph/dijkstra_shortest_paths.hpp>
@@ -42,7 +43,7 @@ ILOLAZYCONSTRAINTCALLBACK1(value_func_model_callback, value_func_model&, bmodel)
 };
 
 value_func_model::value_func_model(IloEnv& env, const problem& _prob) :
-	model(env, _prob),
+	model_with_callback(env, _prob),
 	separate_time(0), subprob_time(0), separate_count(0) {
 
 	// Typedef
@@ -242,7 +243,20 @@ void value_func_model::separate_inner(const NumMatrix& zvals, const NumArray& tv
 	}
 }
 
-IloCplex::Callback value_func_model::attach_callback(IloCplex& cplex)
+std::string value_func_model::get_report()
+{
+	ostringstream ss;
+	ss << "OBJ: " << cplex.getObjValue() << endl <<
+		"TIME: " << cplex.getTime() << " s" <<
+		"    Sep " << separate_time << " s" <<
+		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
+		"    Sub " << (subprob_time * 100 / separate_time) << "%" << endl <<
+		"SEP: Total " << separate_count << endl;
+
+	return ss.str();
+}
+
+IloCplex::Callback value_func_model::attach_callback()
 {
 	return cplex.use(value_func_model_callback(cplex_model.getEnv(), *this));
 }

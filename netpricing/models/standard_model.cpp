@@ -1,6 +1,7 @@
 #include "standard_model.h"
 
 #include "../macros.h"
+#include <sstream>
 
 standard_model::standard_model(IloEnv& env, const problem& _prob) : model(env, _prob) {
 	// Typedef
@@ -130,4 +131,15 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model(env, _
 		cplex_model.add(bilinear2[k]);
 		cplex_model.add(bilinear3[k]);
 	}
+}
+
+std::string standard_model::get_report()
+{
+	using namespace std;
+
+	ostringstream ss;
+	ss << "OBJ: " << cplex.getObjValue() << endl <<
+		"TIME: " << cplex.getTime() << " s" << endl;
+
+	return ss.str();
 }

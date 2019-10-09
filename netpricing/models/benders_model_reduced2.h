@@ -5,7 +5,7 @@
 
 struct problem;
 
-struct benders_model_reduced2 : public model {
+struct benders_model_reduced2 : public model_with_callback {
 
 	using NumVarArray = IloNumVarArray;
 	using NumVarMatrix = IloArray<NumVarArray>;
@@ -66,7 +66,7 @@ struct benders_model_reduced2 : public model {
 
 	benders_model_reduced2(IloEnv& env, const problem& prob);
 
-	void init_subproblem(IloEnv& env, const problem& prob);
+	void init_subproblem();
 	void update_subproblem1(const NumMatrix& xvals);
 	void update_subproblem3(const NumMatrix& xvals, const NumMatrix& yvals);
 
@@ -77,7 +77,9 @@ struct benders_model_reduced2 : public model {
 	bool separate_step1(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs);
 	bool separate_step2(const NumMatrix& xvals, const NumMatrix& yvals, IloExpr& cut_lhs, IloNum& cut_rhs);
 
-	IloCplex::Callback attach_callback(IloCplex& cplex);
+	// Inherited via model_with_callback
+	virtual std::string get_report() override;
+	virtual IloCplex::Callback attach_callback() override;
 };
 
 

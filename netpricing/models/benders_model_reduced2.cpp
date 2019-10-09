@@ -3,6 +3,7 @@
 #include "../macros.h"
 #include "../graph_algorithm.h"
 #include <iostream>
+#include <sstream>
 #include <chrono>
 
 using namespace std;
@@ -35,7 +36,7 @@ ILOLAZYCONSTRAINTCALLBACK1(benders_model_reduced2_callback, benders_model_reduce
 };
 
 benders_model_reduced2::benders_model_reduced2(IloEnv& env, const problem& _prob) :
-	model(env, _prob), submodel1(env, K), subcplex1(env, K), submodel3(env), subcplex3(env), const_val_map(),
+	model_with_callback(env, _prob), submodel1(env, K), subcplex1(env, K), submodel3(env), subcplex3(env), const_val_map(),
 	separate_time(0), subprob1_time(0), subprob2_time(0), subprob3_time(0), separate_count(0),
 	flow_cut_count(0), path_cut_count(0), toll_cut_count(0), opt_cut_count(0) {
 
@@ -62,7 +63,7 @@ benders_model_reduced2::benders_model_reduced2(IloEnv& env, const problem& _prob
 	LOOP(k, K) cplex_model.add(x[k]);
 
 	// Init subproblem
-	init_subproblem(env, prob);
+	init_subproblem();
 
 	// Dual values
 	mu = NumMatrix(env, K);
@@ -78,7 +79,7 @@ benders_model_reduced2::benders_model_reduced2(IloEnv& env, const problem& _prob
 	}
 }
 
-void benders_model_reduced2::init_subproblem(IloEnv& env, const problem& prob)
+void benders_model_reduced2::init_subproblem()
 {
 	// Variables and naming
 	y = NumVarMatrix(env, K);
@@ -317,8 +318,6 @@ void benders_model_reduced2::separate(const NumMatrix& xvals, IloExpr& cut_lhs, 
 
 void benders_model_reduced2::separate_inner(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs)
 {
-	IloEnv env = cplex_model.getEnv();
-
 	// Update and resolve subproblem 1
 	bool is_feasible1 = separate_step1(xvals, cut_lhs, cut_rhs);
 	if (!is_feasible1) {
@@ -419,8 +418,6 @@ void benders_model_reduced2::separate_inner(const NumMatrix& xvals, IloExpr& cut
 }
 
 bool benders_model_reduced2::separate_step1(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs) {
-	IloEnv env = cplex_model.getEnv();
-
 	// Update and resolve subproblem 1
 	update_subproblem1(xvals);
 	LOOP(k, K) {
@@ -536,7 +533,26 @@ bool benders_model_reduced2::separate_step2(const NumMatrix& xvals, const NumMat
 	return true;
 }
 
-IloCplex::Callback benders_model_reduced2::attach_callback(IloCplex& cplex)
+std::string benders_model_reduced2::get_report()
+{
+	ostringstream ss;
+	ss << "OBJ: " << cplex.getObjValue() << endl <<
+		"TIME: " << cplex.getTime() << " s" <<
+		"    Sep " << separate_time << " s" <<
+		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
+		"    Sub1 " << (subprob1_time * 100 / separate_time) << "%" <<
+		"    Sub2 " << (subprob2_time * 100 / separate_time) << "%" <<
+		"    Sub3 " << (subprob3_time * 100 / separate_time) << "%" << endl <<
+		"SEP: Total " << separate_count <<
+		"    F " << flow_cut_count <<
+		"    P " << path_cut_count <<
+		"    T " << toll_cut_count <<
+		"    O " << opt_cut_count << endl;
+
+	return ss.str();
+}
+
+IloCplex::Callback benders_model_reduced2::attach_callback()
 {
 	return cplex.use(benders_model_reduced2_callback(cplex_model.getEnv(), *this));
 }

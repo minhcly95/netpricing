@@ -30,6 +30,8 @@ struct standard_model : public model {
 	RangeMatrix bilinear3;
 
 	standard_model(IloEnv& env, const problem& prob);
+
+	virtual std::string get_report() override;
 };
 
 
