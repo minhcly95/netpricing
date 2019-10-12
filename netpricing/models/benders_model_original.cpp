@@ -353,6 +353,11 @@ void benders_model_original::separate(const NumMatrix& xvals, IloExpr& cut_lhs, 
 	++separate_count;
 }
 
+solution benders_model_original::get_solution()
+{
+	return solution();
+}
+
 std::string benders_model_original::get_report()
 {
 	ostringstream ss;

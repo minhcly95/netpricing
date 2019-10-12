@@ -533,6 +533,11 @@ bool benders_model_reduced2::separate_step2(const NumMatrix& xvals, const NumMat
 	return true;
 }
 
+solution benders_model_reduced2::get_solution()
+{
+	return solution();
+}
+
 std::string benders_model_reduced2::get_report()
 {
 	ostringstream ss;

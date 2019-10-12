@@ -1,6 +1,10 @@
 #include "standard_model.h"
 
 #include "../macros.h"
+#include "model_utils.h"
+
+#include <map>
+#include <utility>
 #include <sstream>
 
 standard_model::standard_model(IloEnv& env, const problem& _prob) : model(env, _prob) {
@@ -131,6 +135,28 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model(env, _
 		cplex_model.add(bilinear2[k]);
 		cplex_model.add(bilinear3[k]);
 	}
+}
+
+solution standard_model::get_solution()
+{
+	using namespace std;
+
+	NumMatrix zvals(env, K);
+	LOOP(k, K) {
+		zvals[k] = NumArray(env, A);
+		cplex.getValues(zvals[k], z[k]);
+	}
+
+	NumArray tvals(env, A1);
+	cplex.getValues(tvals, t);
+
+	solution sol = std::move(fetch_solution_from_z_t(*this, zvals, tvals));
+
+	LOOP(k, K) zvals[k].end();
+	zvals.end();
+	tvals.end();
+
+	return sol;
 }
 
 std::string standard_model::get_report()

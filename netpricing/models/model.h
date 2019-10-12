@@ -3,8 +3,18 @@
 #include <ilcplex/ilocplex.h>
 
 #include "../problem.h"
+#include "../solution.h"
 
 struct model {
+	using NumVarArray = IloNumVarArray;
+	using NumVarMatrix = IloArray<NumVarArray>;
+
+	using NumArray = IloNumArray;
+	using NumMatrix = IloArray<NumArray>;
+
+	using RangeArray = IloRangeArray;
+	using RangeMatrix = IloArray<RangeArray>;
+
 	problem prob;
 	IloEnv env;
 	IloModel cplex_model;
@@ -32,6 +42,8 @@ struct model {
 		cplex.end();
 		cplex_model.end();
 	}
+
+	virtual solution get_solution() = 0;
 
 	virtual std::string get_report() = 0;
 };

@@ -6,16 +6,6 @@
 struct problem;
 
 struct value_func_model : public model_with_callback {
-
-	using NumVarArray = IloNumVarArray;
-	using NumVarMatrix = IloArray<NumVarArray>;
-
-	using NumArray = IloNumArray;
-	using NumMatrix = IloArray<NumArray>;
-
-	using RangeArray = IloRangeArray;
-	using RangeMatrix = IloArray<RangeArray>;
-
 	// Variables
 	IloNumVar v;
 	NumVarMatrix x;
@@ -46,6 +36,7 @@ struct value_func_model : public model_with_callback {
 	IloCplex::Callback attach_callback(IloCplex& cplex);
 
 	// Inherited via model_with_callback
+	virtual solution get_solution() override;
 	virtual std::string get_report() override;
 	virtual IloCplex::Callback attach_callback() override;
 };

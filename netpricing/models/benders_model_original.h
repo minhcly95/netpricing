@@ -6,16 +6,6 @@
 struct problem;
 
 struct benders_model_original : public model_with_callback {
-
-	using NumVarArray = IloNumVarArray;
-	using NumVarMatrix = IloArray<NumVarArray>;
-
-	using NumArray = IloNumArray;
-	using NumMatrix = IloArray<NumArray>;
-
-	using RangeArray = IloRangeArray;
-	using RangeMatrix = IloArray<RangeArray>;
-
 	// Subproblem
 	IloModel submodel;
 	IloCplex subcplex;
@@ -63,6 +53,7 @@ struct benders_model_original : public model_with_callback {
 	void separate(const NumMatrix& xvals, IloExpr& cut_lhs, IloNum& cut_rhs);
 
 	// Inherited via model_with_callback
+	virtual solution get_solution() override;
 	virtual std::string get_report() override;
 	virtual IloCplex::Callback attach_callback() override;
 };

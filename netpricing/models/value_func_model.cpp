@@ -1,6 +1,8 @@
 #include "value_func_model.h"
 
 #include "../macros.h"
+#include "model_utils.h"
+
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -241,6 +243,26 @@ void value_func_model::separate_inner(const NumMatrix& zvals, const NumArray& tv
 
 		cuts.push_back(make_pair(cut_lhs, cut_rhs));
 	}
+}
+
+solution value_func_model::get_solution()
+{
+	NumMatrix zvals(env, K);
+	LOOP(k, K) {
+		zvals[k] = NumArray(env, A);
+		cplex.getValues(zvals[k], z[k]);
+	}
+
+	NumArray tvals(env, A1);
+	cplex.getValues(tvals, t);
+
+	solution sol = std::move(fetch_solution_from_z_t(*this, zvals, tvals));
+
+	LOOP(k, K) zvals[k].end();
+	zvals.end();
+	tvals.end();
+
+	return sol;
 }
 
 std::string value_func_model::get_report()

@@ -10,6 +10,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 add_executable(netpricing
 	"netpricing.cpp"
 	"problem.cpp"
+	"solution.cpp"
+	"models/model_utils.cpp"
 	"models/standard_model.cpp"
 	"models/benders_model_original.cpp"
 	"models/benders_model_reduced.cpp"

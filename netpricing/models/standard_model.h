@@ -5,13 +5,6 @@
 struct problem;
 
 struct standard_model : public model {
-
-	using NumVarArray = IloNumVarArray;
-	using NumVarMatrix = IloArray<NumVarArray>;
-
-	using RangeArray = IloRangeArray;
-	using RangeMatrix = IloArray<RangeArray>;
-
 	// Variables
 	NumVarMatrix x;
 	NumVarMatrix y;
@@ -31,6 +24,7 @@ struct standard_model : public model {
 
 	standard_model(IloEnv& env, const problem& prob);
 
+	virtual solution get_solution() override;
 	virtual std::string get_report() override;
 };
 

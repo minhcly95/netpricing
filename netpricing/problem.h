@@ -6,6 +6,7 @@
 #include <boost/bimap.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/filtered_graph.hpp>
+#include <nlohmann/json.hpp>
 
 #include "commodity.h"
 #include "edge_tollfree_predicate.h"
@@ -66,9 +67,13 @@ struct problem
 	problem(problem&& problem);
 
 	// Read and write
+	static problem parse_json(const nlohmann::json& json_obj);
+	static nlohmann::json get_json(const problem& prob);
+
 	static std::vector<problem> read_from_json(std::string filename);
 	static void write_to_json(std::string filename, const std::vector<problem>& problems);
 
+	nlohmann::json get_json() const;
 	void write_to_json(std::string filename) const;
 
 	// Update auxiliary data

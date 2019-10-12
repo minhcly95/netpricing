@@ -461,6 +461,11 @@ bool benders_model_reduced::separate_step1(const NumMatrix& xvals, IloExpr& cut_
 	return true;
 }
 
+solution benders_model_reduced::get_solution()
+{
+	return solution();
+}
+
 std::string benders_model_reduced::get_report()
 {
 	ostringstream ss;
