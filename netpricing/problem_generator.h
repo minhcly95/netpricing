@@ -7,6 +7,7 @@
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/erdos_renyi_generator.hpp>
 #include <boost/graph/copy.hpp>
+#include <boost/graph/grid_graph.hpp>
 
 #include "problem.h"
 #include "graph_algorithm.h"
@@ -136,13 +137,52 @@ boost::adjacency_list<> random_graph(int num_verts, int num_edges,
 template<class random_engine_type = std::default_random_engine,
 	class cost_dist_type = std::uniform_real_distribution<cost_type>,
 	class demand_dist_type = std::uniform_real_distribution<demand_type>>
-problem random_problem(int num_verts, int num_edges, int num_commodities,
-					   float toll_proportion,
-					   random_engine_type& random_engine = default_engine,
-					   cost_dist_type cost_dist = cost_dist_type(2, 20),
-					   demand_dist_type demand_dist = demand_dist_type(1, 100)) {
+	problem random_problem(int num_verts, int num_edges, int num_commodities,
+						   float toll_proportion,
+						   random_engine_type& random_engine = default_engine,
+						   cost_dist_type cost_dist = cost_dist_type(2, 20),
+						   demand_dist_type demand_dist = demand_dist_type(1, 100)) {
 
 	auto graph = random_graph(num_verts, num_edges, random_engine);
 	return random_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
 }
 
+// SPECIAL GRAPHS
+#define RANDOM_PROBLEM(name, ...) \
+template<class random_engine_type = std::default_random_engine, \
+	class cost_dist_type = std::uniform_real_distribution<cost_type>, \
+	class demand_dist_type = std::uniform_real_distribution<demand_type>> \
+	problem name(__VA_ARGS__, \
+				int num_commodities, \
+				float toll_proportion, \
+				random_engine_type& random_engine = default_engine, \
+				cost_dist_type cost_dist = cost_dist_type(2, 20), \
+				demand_dist_type demand_dist = demand_dist_type(1, 100))
+
+boost::adjacency_list<> grid_graph(int width, int height) {
+	using graph_type = boost::adjacency_list<>;
+
+	graph_type graph(width * height);
+
+	for (int i = 0; i < height; ++i) {
+		for (int j = 0; j < width; ++j) {
+			// Horizontal edges
+			if (j + 1 < width) {
+				boost::add_edge(i * width + j, i * width + j + 1, graph);
+				boost::add_edge(i * width + j + 1, i * width + j, graph);
+			}
+			// Vertical edges
+			if (i + 1 < height) {
+				boost::add_edge(i * width + j, (i + 1) * width + j, graph);
+				boost::add_edge((i + 1) * width + j, i * width + j, graph);
+			}
+		}
+	}
+
+	return graph;
+}
+
+RANDOM_PROBLEM(random_grid_problem, int width, int height) {
+	auto graph = grid_graph(width, height);
+	return random_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
+}

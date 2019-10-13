@@ -9,6 +9,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Add source to this project's executable.
 add_executable(netpricing
 	"netpricing.cpp"
+	"netpricing_options.cpp"
 	"problem.cpp"
 	"solution.cpp"
 	"models/model_utils.cpp"

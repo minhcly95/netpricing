@@ -151,9 +151,14 @@ vector<problem> problem::read_from_json(std::string filename)
 	json root;
 	is >> root;
 
-	for (const json& problem_obj : root) {
-		// Add the problem into the list
-		all_problems.push_back(std::move(problem::parse_json(problem_obj)));
+	if (root.is_array()) {
+		for (const json& problem_obj : root) {
+			// Add the problem into the list
+			all_problems.push_back(problem::parse_json(problem_obj));
+		}
+	}
+	else {
+		all_problems.push_back(problem::parse_json(root["problem"]));
 	}
 
 	return all_problems;
@@ -163,9 +168,14 @@ void problem::write_to_json(std::string filename, const std::vector<problem>& pr
 {
 	json root;
 
-	for (const problem& problem : problems) {
-		// Add to root node
-		root.push_back(std::move(problem::get_json(problem)));
+	if (problems.size() == 1) {
+		root["problem"] = problem::get_json(problems[0]);
+	}
+	else {
+		for (const problem& problem : problems) {
+			// Add to root node
+			root.push_back(problem::get_json(problem));
+		}
 	}
 
 	ofstream os(filename);
