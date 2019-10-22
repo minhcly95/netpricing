@@ -1,6 +1,7 @@
 #include "benders_model_original.h"
 
 #include "../macros.h"
+#include "model_utils.h"
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -31,7 +32,7 @@ ILOLAZYCONSTRAINTCALLBACK1(benders_model_original_callback, benders_model_origin
 
 	// Clean up
 	cut_lhs.end();
-	xvals.end();
+	clean_up(xvals);
 };
 
 benders_model_original::benders_model_original(IloEnv& env, const problem& _prob) :
@@ -355,7 +356,22 @@ void benders_model_original::separate(const NumMatrix& xvals, IloExpr& cut_lhs, 
 
 solution benders_model_original::get_solution()
 {
-	return solution();
+	// Resolve subproblem to get y and t (must be feasible)
+	NumMatrix xvals = get_values(cplex, x);
+
+	update_subproblem(xvals);
+	subcplex.solve();
+
+	NumMatrix yvals = get_values(subcplex, y);
+	NumArray tvals = get_values(subcplex, t);
+
+	solution sol = fetch_solution_from_xy_t(*this, xvals, yvals, tvals);
+
+	clean_up(xvals);
+	clean_up(yvals);
+	tvals.end();
+
+	return sol;
 }
 
 std::string benders_model_original::get_report()

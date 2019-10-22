@@ -139,21 +139,12 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model(env, _
 
 solution standard_model::get_solution()
 {
-	using namespace std;
+	NumMatrix zvals = get_values(cplex, z);
+	NumArray tvals = get_values(cplex, t);
 
-	NumMatrix zvals(env, K);
-	LOOP(k, K) {
-		zvals[k] = NumArray(env, A);
-		cplex.getValues(zvals[k], z[k]);
-	}
+	solution sol = fetch_solution_from_z_t(*this, zvals, tvals);
 
-	NumArray tvals(env, A1);
-	cplex.getValues(tvals, t);
-
-	solution sol = std::move(fetch_solution_from_z_t(*this, zvals, tvals));
-
-	LOOP(k, K) zvals[k].end();
-	zvals.end();
+	clean_up(zvals);
 	tvals.end();
 
 	return sol;

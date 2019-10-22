@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <thread>
+#include <regex>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/program_options.hpp>
 #include <nlohmann/json.hpp>
@@ -58,6 +59,9 @@ string run_model(IloEnv env, problem& prob, string model_name, json& sols_obj, i
 		sols_obj.push_back(std::move(sol_obj));
 
 		model.end();
+
+		regex report_regex("^|(\\n)(?!$)");
+		report = std::regex_replace(report, report_regex, "$1  ");
 		return report;
 	}
 	catch (const IloException & e) {

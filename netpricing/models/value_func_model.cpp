@@ -247,19 +247,12 @@ void value_func_model::separate_inner(const NumMatrix& zvals, const NumArray& tv
 
 solution value_func_model::get_solution()
 {
-	NumMatrix zvals(env, K);
-	LOOP(k, K) {
-		zvals[k] = NumArray(env, A);
-		cplex.getValues(zvals[k], z[k]);
-	}
+	NumMatrix zvals = get_values(cplex, z);
+	NumArray tvals = get_values(cplex, t);
 
-	NumArray tvals(env, A1);
-	cplex.getValues(tvals, t);
+	solution sol = fetch_solution_from_z_t(*this, zvals, tvals);
 
-	solution sol = std::move(fetch_solution_from_z_t(*this, zvals, tvals));
-
-	LOOP(k, K) zvals[k].end();
-	zvals.end();
+	clean_up(zvals);
 	tvals.end();
 
 	return sol;
