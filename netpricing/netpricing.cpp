@@ -87,7 +87,9 @@ int main(int argc, char* argv[])
 		("arcs,a", po::value<int>()->default_value(20), "number of arcs in the random problem")
 		("commodities,k", po::value<int>()->default_value(5), "number of commodities in the random problem")
 		("toll-proportion,p", po::value<float>()->default_value(0.2f), "toll proportion in the random problem")
-		("grid", po::value<grid_params>()->multitoken(), "create a grid problem");
+		("grid", po::value<grid_params>()->multitoken(), "create a grid problem")
+		("delaunay", po::value<int>(), "create a Delaunay graph problem")
+		("voronoi", po::value<int>(), "create a Voronoi graph problem");
 
 	po::variables_map vm;
 
@@ -130,6 +132,30 @@ int main(int argc, char* argv[])
 		cout << "    height = " << params.height << endl;
 		cout << "    k      = " << k << endl;
 		cout << "    p      = " << p << endl;
+	}
+	else if (vm.count("delaunay")) {
+		int n = vm["delaunay"].as<int>();
+		int k = vm["commodities"].as<int>();
+		float p = vm["toll-proportion"].as<float>();
+		prob = new problem(random_delaunay_problem(n, k, p, random_engine));
+
+		cout << "DELAUNAY NETWORK created:" << endl;
+		cout << "    n = " << n << endl;
+		cout << "    k = " << k << endl;
+		cout << "    p = " << p << endl;
+	}
+	else if (vm.count("voronoi")) {
+		int num_seeds = vm["voronoi"].as<int>();
+		int k = vm["commodities"].as<int>();
+		float p = vm["toll-proportion"].as<float>();
+		prob = new problem(random_voronoi_problem(num_seeds, k, p, random_engine));
+		int n = num_vertices(prob->graph);
+
+		cout << "VORONOI NETWORK created:" << endl;
+		cout << "    num_seeds = " << num_seeds << endl;
+		cout << "    n         = " << n << endl;
+		cout << "    k         = " << k << endl;
+		cout << "    p         = " << p << endl;
 	}
 	else {
 		int n = vm["nodes"].as<int>();
