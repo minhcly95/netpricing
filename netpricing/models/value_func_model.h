@@ -2,12 +2,13 @@
 
 #include "model.h"
 #include <unordered_map>
+#include <atomic>
+#include <mutex>
 
 struct problem;
 
-struct value_func_model : public model_with_callback {
+struct value_func_model : public model_with_callbacks {
 	// Variables
-	IloNumVar v;
 	NumVarMatrix x;
 	NumVarMatrix y;
 	NumVarMatrix z;
@@ -21,6 +22,13 @@ struct value_func_model : public model_with_callback {
 	RangeMatrix bilinear2;
 	RangeMatrix bilinear3;
 
+	// Solution injection
+	std::atomic<bool> sol_pending;
+	std::atomic<IloNum> sol_obj;
+	NumVarArray sol_vars;
+	NumArray sol_vals;
+	std::mutex sol_mutex;
+
 	// Utilities
 	double separate_time;
 	double subprob_time;
@@ -30,15 +38,17 @@ struct value_func_model : public model_with_callback {
 
 	void init_variable_name();
 
-	void separate(const NumMatrix& zvals, const NumArray& tvals, std::vector<std::pair<IloExpr, IloNum>>& cuts);
-	void separate_inner(const NumMatrix& zvals, const NumArray& tvals, std::vector<std::pair<IloExpr, IloNum>>& cuts);
+	void separate(const NumArray& tvals,
+				  ConstraintArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj);
+	void separate_inner(const NumArray& tvals,
+						ConstraintArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj);
 
 	IloCplex::Callback attach_callback(IloCplex& cplex);
 
 	// Inherited via model_with_callback
 	virtual solution get_solution() override;
 	virtual std::string get_report() override;
-	virtual IloCplex::Callback attach_callback() override;
+	virtual std::vector<IloCplex::Callback> attach_callbacks() override;
 };
 
 

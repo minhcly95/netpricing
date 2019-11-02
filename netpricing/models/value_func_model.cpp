@@ -12,40 +12,71 @@
 using namespace std;
 using namespace boost;
 
-ILOLAZYCONSTRAINTCALLBACK1(value_func_model_callback, value_func_model&, bmodel) {
+ILOLAZYCONSTRAINTCALLBACK1(value_func_model_separation_callback, value_func_model&, m) {
 	using NumArray = value_func_model::NumArray;
 	using NumMatrix = value_func_model::NumMatrix;
+	using ConstraintArray = value_func_model::ConstraintArray;
 
 	IloEnv env = getEnv();
 
-	// Extract z, t values
-	NumMatrix zvals(env, bmodel.K);
-	LOOP(k, bmodel.K) {
-		zvals[k] = NumArray(env, bmodel.A);
-		getValues(zvals[k], bmodel.z[k]);
-	}
-
-	NumArray tvals(env, bmodel.A1);
-	getValues(tvals, bmodel.t);
+	// Extract t values
+	NumArray tvals(env, m.A1);
+	getValues(tvals, m.t);
 
 	// Separation algorithm
-	vector<pair<IloExpr, IloNum>> cuts;
-	bmodel.separate(zvals, tvals, cuts);
+	ConstraintArray cuts(env);
+	NumMatrix xvals(env), yvals(env);
+	IloNum obj;
 
-	// Add the cut
-	for (auto& cut : cuts) {
-		add(cut.first <= cut.second).end();
-		cut.first.end();
+	m.separate(tvals, cuts, xvals, yvals, obj);
+
+	// Add the cuts
+	LOOP(i, cuts.getSize())
+		add(cuts[i]).end();
+
+	// Replace the solution if better
+	if (obj > m.sol_obj) {
+		lock_guard<mutex> guard(m.sol_mutex);
+		m.sol_obj = obj;
+
+		m.sol_vals.clear();
+		LOOP(k, m.K) m.sol_vals.add(xvals[k]);
+		LOOP(k, m.K) m.sol_vals.add(yvals[k]);
+		m.sol_vals.add(tvals);
+		LOOP(k, m.K) LOOP(a, m.A1) m.sol_vals.add(tvals[a] * xvals[k][a]);
+
+		m.sol_pending = true;
 	}
 
 	// Clean up
-	LOOP(k, bmodel.K) zvals[k].end();
-	zvals.end();
+	cuts.end();
+	clean_up(xvals);
+	clean_up(yvals);
 	tvals.end();
 };
 
+ILOHEURISTICCALLBACK1(value_func_model_solution_callback, value_func_model&, m) {
+	if (!m.sol_pending) return;
+
+	// Start injecting
+	lock_guard<mutex> guard(m.sol_mutex);
+
+	setSolution(m.sol_vars, m.sol_vals, m.sol_obj);
+	m.sol_pending = false;
+};
+
+ILOINCUMBENTCALLBACK1(value_func_model_incumbent_callback, value_func_model&, m) {
+	IloNum obj = getObjValue();
+	if (obj > m.sol_obj) {
+		lock_guard<mutex> guard(m.sol_mutex);
+		m.sol_obj = obj;
+		m.sol_pending = false;
+	}
+};
+
 value_func_model::value_func_model(IloEnv& env, const problem& _prob) :
-	model_with_callback(env, _prob),
+	model_with_callbacks(env, _prob),
+	sol_pending(false), sol_vars(env), sol_vals(env), sol_obj(-IloInfinity), sol_mutex(),
 	separate_time(0), subprob_time(0), separate_count(0) {
 
 	// Typedef
@@ -139,6 +170,12 @@ value_func_model::value_func_model(IloEnv& env, const problem& _prob) :
 		cplex_model.add(bilinear3[k]);
 	}
 
+	// Solution injection
+	LOOP(k, K) sol_vars.add(x[k]);
+	LOOP(k, K) sol_vars.add(y[k]);
+	sol_vars.add(t);
+	LOOP(k, K) sol_vars.add(tx[k]);
+
 	init_variable_name();
 }
 
@@ -174,17 +211,19 @@ void value_func_model::init_variable_name() {
 	}
 }
 
-void value_func_model::separate(const NumMatrix& zvals, const NumArray& tvals, vector<pair<IloExpr, IloNum>>& cuts) {
+void value_func_model::separate(const NumArray& tvals,
+								ConstraintArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj) {
 	auto start = chrono::high_resolution_clock::now();
 
-	separate_inner(zvals, tvals, cuts);
+	separate_inner(tvals, cuts, xvals, yvals, obj);
 
 	auto end = chrono::high_resolution_clock::now();
 	separate_time += chrono::duration<double>(end - start).count();
 	++separate_count;
 }
 
-void value_func_model::separate_inner(const NumMatrix& zvals, const NumArray& tvals, vector<pair<IloExpr, IloNum>>& cuts)
+void value_func_model::separate_inner(const NumArray& tvals,
+									  ConstraintArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj)
 {
 	// Copy a new cost map
 	using cost_map_type = map<problem::edge_descriptor, cost_type>;
@@ -199,6 +238,9 @@ void value_func_model::separate_inner(const NumMatrix& zvals, const NumArray& tv
 		auto edge = A1_TO_EDGE(prob, a);
 		tolled_cost_map[edge] += tvals[a];
 	}
+
+	// Objective value
+	obj = 0;
 
 	LOOP(k, K) {
 		// Find the shortest path
@@ -218,6 +260,10 @@ void value_func_model::separate_inner(const NumMatrix& zvals, const NumArray& tv
 		IloExpr cut_lhs(cplex_model.getEnv());
 		IloNum cut_rhs = 0;
 
+		// Solution formulation
+		NumArray xk(env, A1), yk(env, A2);
+		IloNum objk = 0;
+
 		// Fixed part
 		LOOP(a, A) {
 			auto edge = A_TO_EDGE(prob, a);
@@ -236,12 +282,23 @@ void value_func_model::separate_inner(const NumMatrix& zvals, const NumArray& tv
 			if (prob.is_tolled_map[edge]) {
 				int a1 = EDGE_TO_A1(prob, edge);
 				cut_lhs.setLinearCoef(t[a1], -1);
+
+				xk[a1] = 1;
+				objk += tvals[a1];
+			}
+			else {
+				int a2 = EDGE_TO_A2(prob, edge);
+				yk[a2] = 1;
 			}
 
 			current = prev;
 		}
 
-		cuts.push_back(make_pair(cut_lhs, cut_rhs));
+		cuts.add(cut_lhs <= cut_rhs);
+
+		xvals.add(xk);
+		yvals.add(yk);
+		obj += objk * prob.commodities[k].demand;
 	}
 }
 
@@ -271,7 +328,11 @@ std::string value_func_model::get_report()
 	return ss.str();
 }
 
-IloCplex::Callback value_func_model::attach_callback()
+vector<IloCplex::Callback> value_func_model::attach_callbacks()
 {
-	return cplex.use(value_func_model_callback(cplex_model.getEnv(), *this));
+	return vector<IloCplex::Callback>{
+		cplex.use(value_func_model_separation_callback(cplex_model.getEnv(), *this)),
+		cplex.use(value_func_model_solution_callback(cplex_model.getEnv(), *this)),
+		cplex.use(value_func_model_incumbent_callback(cplex_model.getEnv(), *this))
+	};
 }

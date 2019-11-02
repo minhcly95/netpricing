@@ -14,6 +14,7 @@ struct model {
 
 	using RangeArray = IloRangeArray;
 	using RangeMatrix = IloArray<RangeArray>;
+	using ConstraintArray = IloConstraintArray;
 
 	problem prob;
 	IloEnv env;
@@ -48,21 +49,34 @@ struct model {
 	virtual std::string get_report() = 0;
 };
 
-struct model_with_callback : public model {
-	IloCplex::Callback callback;
+struct model_with_callbacks : public model {
+	std::vector<IloCplex::Callback> callbacks;
 
-	model_with_callback(IloEnv& env, const problem& _prob) : model(env, _prob) {}
+	model_with_callbacks(IloEnv& env, const problem& _prob) : model(env, _prob) {}
 
 	virtual bool solve() override {
-		callback = attach_callback();
+		callbacks = attach_callbacks();
 		return model::solve();
 	}
 
 	virtual void end() override {
-		callback.end();
+		for (auto& cb : callbacks)
+			cb.end();
 		model::end();
 	}
 
+	virtual std::vector<IloCplex::Callback> attach_callbacks() = 0;
+};
+
+struct model_with_callback : public model_with_callbacks {
+	IloCplex::Callback callback;
+
+	model_with_callback(IloEnv& env, const problem& _prob) : model_with_callbacks(env, _prob) {}
+
 	virtual IloCplex::Callback attach_callback() = 0;
+
+	virtual std::vector<IloCplex::Callback> attach_callbacks() override {
+		return std::vector<IloCplex::Callback>{ attach_callback() };
+	}
 };
 
