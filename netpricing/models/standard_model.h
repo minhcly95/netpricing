@@ -4,7 +4,7 @@
 
 struct problem;
 
-struct standard_model : public model {
+struct standard_model : public model_base, public model_single {
 	// Variables
 	NumVarMatrix x;
 	NumVarMatrix y;

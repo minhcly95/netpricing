@@ -5,7 +5,7 @@
 
 struct problem;
 
-struct benders_model_reduced2 : public model_with_callback {
+struct benders_model_reduced2 : public model_with_callback, public model_single {
 	// Subproblems
 	IloArray<IloModel> submodel1;
 	IloArray<IloCplex> subcplex1;

@@ -5,7 +5,7 @@
 #include "../problem.h"
 #include "../solution.h"
 
-struct model {
+struct model_base {
 	using NumVarArray = IloNumVarArray;
 	using NumVarMatrix = IloArray<NumVarArray>;
 
@@ -16,19 +16,11 @@ struct model {
 	using RangeMatrix = IloArray<RangeArray>;
 	using ConstraintArray = IloConstraintArray;
 
-	problem prob;
 	IloEnv env;
 	IloModel cplex_model;
 	IloCplex cplex;
-	int K, V, A, A1, A2;
 
-	model(IloEnv& env, const problem& _prob) : env(env), cplex_model(env), cplex(cplex_model), prob(_prob) {
-		K = prob.commodities.size();
-		V = boost::num_vertices(prob.graph);
-		A = boost::num_edges(prob.graph);
-		A1 = prob.tolled_index_map.size();
-		A2 = prob.tollfree_index_map.size();
-	}
+	model_base(IloEnv& env) : env(env), cplex_model(env), cplex(cplex_model) { }
 
 	virtual IloCplex get_cplex() {
 		return cplex;
@@ -49,20 +41,20 @@ struct model {
 	virtual std::string get_report() = 0;
 };
 
-struct model_with_callbacks : public model {
+struct model_with_callbacks : public model_base {
 	std::vector<IloCplex::Callback> callbacks;
 
-	model_with_callbacks(IloEnv& env, const problem& _prob) : model(env, _prob) {}
+	model_with_callbacks(IloEnv& env) : model_base(env) {}
 
 	virtual bool solve() override {
 		callbacks = attach_callbacks();
-		return model::solve();
+		return model_base::solve();
 	}
 
 	virtual void end() override {
 		for (auto& cb : callbacks)
 			cb.end();
-		model::end();
+		model_base::end();
 	}
 
 	virtual std::vector<IloCplex::Callback> attach_callbacks() = 0;
@@ -71,7 +63,7 @@ struct model_with_callbacks : public model {
 struct model_with_callback : public model_with_callbacks {
 	IloCplex::Callback callback;
 
-	model_with_callback(IloEnv& env, const problem& _prob) : model_with_callbacks(env, _prob) {}
+	model_with_callback(IloEnv& env) : model_with_callbacks(env) {}
 
 	virtual IloCplex::Callback attach_callback() = 0;
 
@@ -80,3 +72,15 @@ struct model_with_callback : public model_with_callbacks {
 	}
 };
 
+struct model_single {
+	problem prob;
+	int K, V, A, A1, A2;
+
+	model_single(const problem& _prob) : prob(_prob) {
+		K = prob.commodities.size();
+		V = boost::num_vertices(prob.graph);
+		A = boost::num_edges(prob.graph);
+		A1 = prob.tolled_index_map.size();
+		A2 = prob.tollfree_index_map.size();
+	}
+};

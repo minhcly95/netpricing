@@ -37,7 +37,7 @@ ILOLAZYCONSTRAINTCALLBACK1(benders_model_reduced2_callback, benders_model_reduce
 };
 
 benders_model_reduced2::benders_model_reduced2(IloEnv& env, const problem& _prob) :
-	model_with_callback(env, _prob), submodel1(env, K), subcplex1(env, K), submodel3(env), subcplex3(env), const_val_map(),
+	model_with_callback(env), model_single(_prob), submodel1(env, K), subcplex1(env, K), submodel3(env), subcplex3(env), const_val_map(),
 	separate_time(0), subprob1_time(0), subprob2_time(0), subprob3_time(0), separate_count(0),
 	flow_cut_count(0), path_cut_count(0), toll_cut_count(0), opt_cut_count(0) {
 

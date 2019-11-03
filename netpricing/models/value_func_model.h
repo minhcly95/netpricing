@@ -7,7 +7,7 @@
 
 struct problem;
 
-struct value_func_model : public model_with_callbacks {
+struct value_func_model : public model_with_callbacks, public model_single {
 	// Variables
 	NumVarMatrix x;
 	NumVarMatrix y;

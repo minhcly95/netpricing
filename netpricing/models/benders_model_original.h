@@ -5,7 +5,7 @@
 
 struct problem;
 
-struct benders_model_original : public model_with_callback {
+struct benders_model_original : public model_with_callback, public model_single {
 	// Subproblem
 	IloModel submodel;
 	IloCplex subcplex;

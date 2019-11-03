@@ -36,7 +36,7 @@ ILOLAZYCONSTRAINTCALLBACK1(benders_model_original_callback, benders_model_origin
 };
 
 benders_model_original::benders_model_original(IloEnv& env, const problem& _prob) :
-	model_with_callback(env, _prob), submodel(env), subcplex(env), const_val_map(),
+	model_with_callback(env), model_single(_prob), submodel(env), subcplex(env), const_val_map(),
 	separate_time(0), subprob_time(0), separate_count(0) {
 
 	// Variables

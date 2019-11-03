@@ -7,7 +7,7 @@
 #include <utility>
 #include <sstream>
 
-standard_model::standard_model(IloEnv& env, const problem& _prob) : model(env, _prob) {
+standard_model::standard_model(IloEnv& env, const problem& _prob) : model_base(env), model_single(_prob) {
 	// Typedef
 	using namespace std;
 	using namespace boost;

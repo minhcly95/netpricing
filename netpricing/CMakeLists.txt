@@ -11,6 +11,7 @@ add_executable(netpricing
 	"netpricing.cpp"
 	"netpricing_options.cpp"
 	"problem.cpp"
+	"problem_multi.cpp"
 	"problem_generator.cpp"
 	"solution.cpp"
 	"shullpro/s_hull_pro.cpp"

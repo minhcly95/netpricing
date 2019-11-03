@@ -63,6 +63,7 @@ ILOHEURISTICCALLBACK1(value_func_model_solution_callback, value_func_model&, m) 
 
 	setSolution(m.sol_vars, m.sol_vals, m.sol_obj);
 	m.sol_pending = false;
+	cout << "Sol injected: " << m.sol_obj << endl;
 };
 
 ILOINCUMBENTCALLBACK1(value_func_model_incumbent_callback, value_func_model&, m) {
@@ -75,7 +76,7 @@ ILOINCUMBENTCALLBACK1(value_func_model_incumbent_callback, value_func_model&, m)
 };
 
 value_func_model::value_func_model(IloEnv& env, const problem& _prob) :
-	model_with_callbacks(env, _prob),
+	model_with_callbacks(env), model_single(_prob),
 	sol_pending(false), sol_vars(env), sol_vals(env), sol_obj(-IloInfinity), sol_mutex(),
 	separate_time(0), subprob_time(0), separate_count(0) {
 
@@ -236,7 +237,7 @@ void value_func_model::separate_inner(const NumArray& tvals,
 	// Add toll to new cost map
 	LOOP(a, A1) {
 		auto edge = A1_TO_EDGE(prob, a);
-		tolled_cost_map[edge] += tvals[a];
+		tolled_cost_map[edge] += tvals[a] * 0.9999;	// Prefer tolled arcs
 	}
 
 	// Objective value
