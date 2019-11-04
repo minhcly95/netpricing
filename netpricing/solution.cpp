@@ -42,3 +42,8 @@ json solution::get_json(const problem& prob) const
 
 	return json_obj;
 }
+
+json solution::get_json(const problem_multi& prob) const
+{
+	return json();
+}

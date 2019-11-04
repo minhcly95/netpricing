@@ -34,7 +34,7 @@ struct problem : public problem_base
 	static std::vector<problem> read_from_json(std::string filename);
 	static void write_to_json(std::string filename, const std::vector<problem>& problems);
 
-	nlohmann::json get_json() const;
+	virtual nlohmann::json get_json() const override;
 	void write_to_json(std::string filename) const;
 
 	// Update auxiliary data

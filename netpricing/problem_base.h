@@ -42,4 +42,6 @@ struct problem_base
 	using cost_matrix = std::vector<cost_array>;
 	using big_m_type = cost_matrix;
 	using big_n_type = cost_array;
+
+	virtual nlohmann::json get_json() const = 0;
 };

@@ -186,6 +186,7 @@ void problem_multi::update_indices()
 
 	// Common tolled arcs mapping
 	int total_num_tolled = 0;
+	max_edge_index = 0;
 
 	// Mapping
 	LOOP(k, commodities.size()) {
@@ -210,7 +211,11 @@ void problem_multi::update_indices()
 				tollfree_index_maps[k].insert(edge_index_rel(tollfree_index++, *ei));
 			}
 		}
+
+		max_edge_index = max(max_edge_index, tollfree_index);
 	}
+
+	max_edge_index += total_num_tolled;
 
 	// All edges mapping
 	LOOP(k, commodities.size()) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "problem.h"
+#include "problem_multi.h"
 
 #include <vector>
 #include <nlohmann/json.hpp>
@@ -18,4 +19,5 @@ struct solution {
 	solution(solution&& other);
 
 	nlohmann::json get_json(const problem& prob) const;
+	nlohmann::json get_json(const problem_multi& prob) const;
 };

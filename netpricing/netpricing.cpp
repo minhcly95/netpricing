@@ -34,7 +34,7 @@ void print_src_dst(P& prob, T& model) {
 }
 
 template <class model_type>
-string run_model(IloEnv env, problem& prob, string model_name, json& sols_obj, int num_thread) {
+string run_model(IloEnv env, typename model_type::problem_type& prob, string model_name, json& sols_obj, int num_thread) {
 	try {
 		cout << "--------------------------------------" << endl;
 		cout << model_name << endl;
@@ -80,6 +80,7 @@ int main(int argc, char* argv[])
 		("standard,s", "run standard model")
 		("benders,b", po::value<int>(), "run benders model (arg is 0, 1, or 2)")
 		("valuefunc,v", "run value function model")
+		("multi,m", "run multi-graph version")
 		("input,i", po::value<string>(), "input problem from file")
 		("output,o", po::value<string>()->default_value("report.json"), "output report file")
 		("thread,t", po::value<int>()->default_value(DEFAULT_NUM_THREADS), "number of threads")
@@ -117,6 +118,7 @@ int main(int argc, char* argv[])
 
 	// Create a problem
 	problem* prob;
+	problem_multi* prob_multi;
 	if (vm.count("input")) {
 		prob = new problem(problem::read_from_json(vm["input"].as<string>())[0]);
 		cout << "NETWORK imported from " << vm["input"].as<string>() << endl;
@@ -172,13 +174,23 @@ int main(int argc, char* argv[])
 	}
 	report_obj["problem"] = prob->get_json();
 
+	// Problem multi
+	bool is_multi = vm.count("multi") > 0;
+	if (is_multi) {
+		prob_multi = new problem_multi(*static_cast<problem*>(prob));
+		cout << "MULTI-GRAPH version activated" << endl;
+	}
+
 	// Run the models
 	IloEnv env;
 	ostringstream report;
 	const int num_thread = vm["thread"].as<int>();
 
 	if (vm.count("standard")) {
-		report << "STANDARD:" << endl << run_model<standard_model>(env, *prob, "STANDARD MODEL", sols_obj, num_thread);
+		report << "STANDARD:" << endl <<
+			(is_multi ?
+			 run_model<standard_model_multi>(env, *prob_multi, "STANDARD MODEL MULTI", sols_obj, num_thread) :
+			 run_model<standard_model>(env, *prob, "STANDARD MODEL", sols_obj, num_thread));
 	}
 	if (vm.count("benders")) {
 		report << "BENDERS:" << endl;

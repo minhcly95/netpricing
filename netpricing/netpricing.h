@@ -9,6 +9,7 @@
 #include <ilcplex/ilocplex.h>
 
 #include "problem.h"
+#include "problem_multi.h"
 #include "problem_generator.h"
 
 #include "models/model.h"
@@ -17,5 +18,7 @@
 #include "models/benders_model_reduced.h"
 #include "models/benders_model_reduced2.h"
 #include "models/value_func_model.h"
+
+#include "models/standard_model_multi.h"
 
 #include "macros.h"

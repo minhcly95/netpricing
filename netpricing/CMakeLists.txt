@@ -17,6 +17,7 @@ add_executable(netpricing
 	"shullpro/s_hull_pro.cpp"
 	"models/model_utils.cpp"
 	"models/standard_model.cpp"
+	"models/standard_model_multi.cpp"
 	"models/benders_model_original.cpp"
 	"models/benders_model_reduced.cpp"
 	"models/benders_model_reduced2.cpp"

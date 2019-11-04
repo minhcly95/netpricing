@@ -19,6 +19,7 @@ struct problem_multi : public problem_base
 	std::vector<edge_index_bimap_type> tolled_index_maps;
 	std::vector<edge_index_bimap_type> tollfree_index_maps;
 	std::vector<edge_index_bimap_type> alledges_index_maps;
+	int max_edge_index;
 
 	std::vector<tollfree_graph_type> tollfree_graphs;
 	big_m_type big_m;
@@ -38,7 +39,7 @@ struct problem_multi : public problem_base
 	static problem_multi parse_json(const nlohmann::json& json_obj);
 	static nlohmann::json get_json(const problem_multi& prob);
 
-	nlohmann::json get_json() const;
+	virtual nlohmann::json get_json() const override;
 	void write_to_json(std::string filename) const;
 
 	// Update auxiliary data
