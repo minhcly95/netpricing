@@ -12,10 +12,23 @@
 using namespace std;
 using namespace boost;
 
-struct value_func_model_candidate_callback : public IloCplex::Callback::Function {
+struct value_func_model_callback : public IloCplex::Callback::Function {
 	value_func_model& m;
+	double tol;
+	model_base::NumVarArray heur_vars;
 
-	value_func_model_candidate_callback(value_func_model& _m) : m(_m) {}
+	value_func_model_callback(value_func_model& _m)
+		: m(_m), tol(1e-6), heur_vars(m.get_cplex().getEnv()) {
+
+		LOOP(k, m.K) heur_vars.add(m.x[k]);
+		LOOP(k, m.K) heur_vars.add(m.y[k]);
+		heur_vars.add(m.t);
+		LOOP(k, m.K) heur_vars.add(m.tx[k]);
+	}
+
+	virtual ~value_func_model_callback() {
+		heur_vars.end();
+	}
 
 	virtual void invoke(const IloCplex::Callback::Context& context) override {
 		using NumArray = value_func_model::NumArray;
@@ -23,10 +36,21 @@ struct value_func_model_candidate_callback : public IloCplex::Callback::Function
 		using RangeArray = value_func_model::RangeArray;
 
 		IloEnv env = context.getEnv();
+		bool is_candidate = context.inCandidate();
+
+		// Only run every 100 nodes
+		if (!is_candidate) {
+			int node_count = context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount);
+			if (node_count % 100 > 0)
+				return;
+		}
 
 		// Extract t values
 		NumArray tvals(env, m.A1);
-		context.getCandidatePoint(m.t, tvals);
+		if (is_candidate)
+			context.getCandidatePoint(m.t, tvals);
+		else
+			context.getRelaxationPoint(m.t, tvals);
 
 		// Separation algorithm
 		RangeArray cuts(env);
@@ -36,16 +60,45 @@ struct value_func_model_candidate_callback : public IloCplex::Callback::Function
 		m.separate(tvals, cuts, xvals, yvals, obj);
 
 		// Add the cuts
-		LOOP(i, cuts.getSize()) {
-			auto expr = cuts[i].getExpr();
-			double lb = cuts[i].getLB();
-			double ub = cuts[i].getUB();
+		bool post_heur = true;
+		if (is_candidate) {
+			// Add the cuts when candidate is rejected
+			bool rejected = false;
+			LOOP(i, cuts.getSize()) {
+				auto expr = cuts[i].getExpr();
+				double lb = cuts[i].getLB();
+				double ub = cuts[i].getUB();
 
-			double expr_val = context.getCandidateValue(expr);
-			if (!(lb <= expr_val && expr_val <= ub)) {
-				context.rejectCandidate(cuts);
-				break;
+				double expr_val = context.getCandidateValue(expr);
+				if (!(lb * (1 - tol) <= expr_val && expr_val <= ub * (1 + tol))) {
+					context.rejectCandidate(cuts);
+					rejected = true;
+					post_heur = false;
+					break;
+				}
 			}
+			//cout << (rejected ? "R" : "A");
+		}
+		else {
+			// Add the cuts anyway
+			LOOP(i, cuts.getSize())
+				context.addUserCut(cuts[i], IloCplex::CutManagement::UseCutFilter, false);
+			//cout << "C " << context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount) << endl;
+		}
+
+		// Post heuristic solution
+		if (post_heur && obj > context.getIncumbentObjective()) {
+			NumArray heur_vals(env);
+
+			LOOP(k, m.K) heur_vals.add(xvals[k]);
+			LOOP(k, m.K) heur_vals.add(yvals[k]);
+			heur_vals.add(tvals);
+			LOOP(k, m.K) LOOP(a, m.A1) heur_vals.add(tvals[a] * xvals[k][a]);
+
+			context.postHeuristicSolution(heur_vars, heur_vals, obj, IloCplex::Callback::Context::SolutionStrategy::NoCheck);
+
+			//cout << "P";
+			heur_vals.end();
 		}
 
 		// Clean up
@@ -307,6 +360,6 @@ std::string value_func_model::get_report()
 vector<pair<IloCplex::Callback::Function*, value_func_model::ContextId>> value_func_model::attach_callbacks()
 {
 	return {
-		make_pair(new value_func_model_candidate_callback(*this), CPX_CALLBACKCONTEXT_CANDIDATE)
+		make_pair(new value_func_model_callback(*this), CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION)
 	};
 }
