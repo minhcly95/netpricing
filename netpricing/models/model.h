@@ -75,6 +75,30 @@ struct model_with_callback : public model_with_callbacks {
 	}
 };
 
+struct model_with_generic_callbacks : public model_base {
+	using ContextId = CPXLONG;
+
+	std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> callbacks;
+
+	model_with_generic_callbacks(IloEnv& env) : model_base(env) {}
+
+	virtual bool solve() override {
+		callbacks = attach_callbacks();
+		for (auto& cb : callbacks)
+			cplex.use(cb.first, cb.second);
+
+		return model_base::solve();
+	}
+
+	virtual void end() override {
+		for (auto& cb : callbacks)
+			delete cb.first;
+		model_base::end();
+	}
+
+	virtual std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> attach_callbacks() = 0;
+};
+
 struct model_single {
 	using problem_type = problem;
 

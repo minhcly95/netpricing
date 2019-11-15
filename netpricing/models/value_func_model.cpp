@@ -12,72 +12,53 @@
 using namespace std;
 using namespace boost;
 
-ILOLAZYCONSTRAINTCALLBACK1(value_func_model_separation_callback, value_func_model&, m) {
-	using NumArray = value_func_model::NumArray;
-	using NumMatrix = value_func_model::NumMatrix;
-	using ConstraintArray = value_func_model::ConstraintArray;
+struct value_func_model_candidate_callback : public IloCplex::Callback::Function {
+	value_func_model& m;
 
-	IloEnv env = getEnv();
+	value_func_model_candidate_callback(value_func_model& _m) : m(_m) {}
 
-	// Extract t values
-	NumArray tvals(env, m.A1);
-	getValues(tvals, m.t);
+	virtual void invoke(const IloCplex::Callback::Context& context) override {
+		using NumArray = value_func_model::NumArray;
+		using NumMatrix = value_func_model::NumMatrix;
+		using RangeArray = value_func_model::RangeArray;
 
-	// Separation algorithm
-	ConstraintArray cuts(env);
-	NumMatrix xvals(env), yvals(env);
-	IloNum obj;
+		IloEnv env = context.getEnv();
 
-	m.separate(tvals, cuts, xvals, yvals, obj);
+		// Extract t values
+		NumArray tvals(env, m.A1);
+		context.getCandidatePoint(m.t, tvals);
 
-	// Add the cuts
-	LOOP(i, cuts.getSize())
-		add(cuts[i]).end();
+		// Separation algorithm
+		RangeArray cuts(env);
+		NumMatrix xvals(env), yvals(env);
+		IloNum obj;
 
-	// Replace the solution if better
-	if (obj > m.sol_obj) {
-		lock_guard<mutex> guard(m.sol_mutex);
-		m.sol_obj = obj;
+		m.separate(tvals, cuts, xvals, yvals, obj);
 
-		m.sol_vals.clear();
-		LOOP(k, m.K) m.sol_vals.add(xvals[k]);
-		LOOP(k, m.K) m.sol_vals.add(yvals[k]);
-		m.sol_vals.add(tvals);
-		LOOP(k, m.K) LOOP(a, m.A1) m.sol_vals.add(tvals[a] * xvals[k][a]);
+		// Add the cuts
+		LOOP(i, cuts.getSize()) {
+			auto expr = cuts[i].getExpr();
+			double lb = cuts[i].getLB();
+			double ub = cuts[i].getUB();
 
-		m.sol_pending = true;
-	}
+			double expr_val = context.getCandidateValue(expr);
+			if (!(lb <= expr_val && expr_val <= ub)) {
+				context.rejectCandidate(cuts);
+				break;
+			}
+		}
 
-	// Clean up
-	cuts.end();
-	clean_up(xvals);
-	clean_up(yvals);
-	tvals.end();
-};
-
-ILOHEURISTICCALLBACK1(value_func_model_solution_callback, value_func_model&, m) {
-	if (!m.sol_pending) return;
-
-	// Start injecting
-	lock_guard<mutex> guard(m.sol_mutex);
-
-	setSolution(m.sol_vars, m.sol_vals, m.sol_obj);
-	m.sol_pending = false;
-	cout << "Sol injected: " << m.sol_obj << endl;
-};
-
-ILOINCUMBENTCALLBACK1(value_func_model_incumbent_callback, value_func_model&, m) {
-	IloNum obj = getObjValue();
-	if (obj > m.sol_obj) {
-		lock_guard<mutex> guard(m.sol_mutex);
-		m.sol_obj = obj;
-		m.sol_pending = false;
+		// Clean up
+		LOOP(i, cuts.getSize()) cuts[i].end();
+		cuts.end();
+		clean_up(xvals);
+		clean_up(yvals);
+		tvals.end();
 	}
 };
 
 value_func_model::value_func_model(IloEnv& env, const problem& _prob) :
-	model_with_callbacks(env), model_single(_prob),
-	sol_pending(false), sol_vars(env), sol_vals(env), sol_obj(-IloInfinity), sol_mutex(),
+	model_with_generic_callbacks(env), model_single(_prob),
 	separate_time(0), subprob_time(0), separate_count(0) {
 
 	// Typedef
@@ -171,12 +152,6 @@ value_func_model::value_func_model(IloEnv& env, const problem& _prob) :
 		cplex_model.add(bilinear3[k]);
 	}
 
-	// Solution injection
-	LOOP(k, K) sol_vars.add(x[k]);
-	LOOP(k, K) sol_vars.add(y[k]);
-	sol_vars.add(t);
-	LOOP(k, K) sol_vars.add(tx[k]);
-
 	init_variable_name();
 }
 
@@ -213,7 +188,7 @@ void value_func_model::init_variable_name() {
 }
 
 void value_func_model::separate(const NumArray& tvals,
-								ConstraintArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj) {
+								RangeArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj) {
 	auto start = chrono::high_resolution_clock::now();
 
 	separate_inner(tvals, cuts, xvals, yvals, obj);
@@ -224,7 +199,7 @@ void value_func_model::separate(const NumArray& tvals,
 }
 
 void value_func_model::separate_inner(const NumArray& tvals,
-									  ConstraintArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj)
+									  RangeArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj)
 {
 	// Copy a new cost map
 	using cost_map_type = map<problem::edge_descriptor, cost_type>;
@@ -329,11 +304,9 @@ std::string value_func_model::get_report()
 	return ss.str();
 }
 
-vector<IloCplex::Callback> value_func_model::attach_callbacks()
+vector<pair<IloCplex::Callback::Function*, value_func_model::ContextId>> value_func_model::attach_callbacks()
 {
-	return vector<IloCplex::Callback>{
-		cplex.use(value_func_model_separation_callback(cplex_model.getEnv(), *this)),
-		cplex.use(value_func_model_solution_callback(cplex_model.getEnv(), *this)),
-		cplex.use(value_func_model_incumbent_callback(cplex_model.getEnv(), *this))
+	return {
+		make_pair(new value_func_model_candidate_callback(*this), CPX_CALLBACKCONTEXT_CANDIDATE)
 	};
 }
