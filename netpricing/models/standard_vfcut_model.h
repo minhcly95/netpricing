@@ -1,23 +1,23 @@
 #pragma once
 
 #include "model.h"
-#include <unordered_map>
-#include <atomic>
-#include <mutex>
 
 struct problem;
 
-struct value_func_model : public model_with_generic_callbacks, public model_single {
+struct standard_vfcut_model : public model_with_generic_callbacks, public model_single {
 	// Variables
 	NumVarMatrix x;
 	NumVarMatrix y;
 	NumVarMatrix z;
+	NumVarMatrix lambda;
 	NumVarMatrix tx;
 	IloNumVarArray t;
 
 	// Objective and constraints
 	IloObjective obj;
 	RangeMatrix flow_constr;
+	RangeMatrix dual_feas;
+	RangeArray equal_obj;
 	RangeMatrix bilinear1;
 	RangeMatrix bilinear2;
 	RangeMatrix bilinear3;
@@ -27,7 +27,7 @@ struct value_func_model : public model_with_generic_callbacks, public model_sing
 	double subprob_time;
 	int separate_count;
 
-	value_func_model(IloEnv& env, const problem& prob);
+	standard_vfcut_model(IloEnv& env, const problem& prob);
 
 	void init_variable_name();
 

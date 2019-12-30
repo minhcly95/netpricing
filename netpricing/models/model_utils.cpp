@@ -6,6 +6,25 @@
 
 using namespace std;
 
+template <class ArrayType>
+IloArray<ArrayType> make_matrix(IloEnv env, int d1, int d2) {
+	IloArray<ArrayType> matrix(env, d1);
+	LOOP(i, d1) matrix[i] = ArrayType(env, d2);
+	return matrix;
+}
+
+model_base::NumMatrix make_num_matrix(IloEnv env, int d1, int d2) {
+	return make_matrix<model_base::NumArray>(env, d1, d2);
+}
+
+model_base::NumVarMatrix make_numvar_matrix(IloEnv env, int d1, int d2) {
+	return make_matrix<model_base::NumVarArray>(env, d1, d2);
+}
+
+model_base::RangeMatrix make_range_matrix(IloEnv env, int d1, int d2) {
+	return make_matrix<model_base::RangeArray>(env, d1, d2);
+}
+
 model_base::NumArray get_values(IloCplex& cplex, const model_base::NumVarArray& vars)
 {
 	model_base::NumArray vals(cplex.getEnv(), vars.getSize());

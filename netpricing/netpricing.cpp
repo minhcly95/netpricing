@@ -78,8 +78,10 @@ int main(int argc, char* argv[])
 	desc.add_options()
 		("help,h", "display help message")
 		("standard,s", "run standard model")
-		("benders,b", po::value<int>(), "run benders model (arg is 0, 1, or 2)")
+		("standard-vfcut,c", "run standard model with value function cuts")
+		("benders,b", po::value<int>(), "run Benders model (arg is 0, 1, or 2)")
 		("valuefunc,v", "run value function model")
+		("xtbenders,x", "run xT Benders model")
 		("multi,m", "run multi-graph version")
 		("input,i", po::value<string>(), "input problem from file")
 		("output,o", po::value<string>()->default_value("report.json"), "output report file")
@@ -192,6 +194,10 @@ int main(int argc, char* argv[])
 			 run_model<standard_model_multi>(env, *prob_multi, "STANDARD MODEL MULTI", sols_obj, num_thread) :
 			 run_model<standard_model>(env, *prob, "STANDARD MODEL", sols_obj, num_thread));
 	}
+	if (vm.count("standard-vfcut")) {
+		report << "STANDARD VFCUT:" << endl <<
+			 run_model<standard_vfcut_model>(env, *prob, "STANDARD VFCUT MODEL", sols_obj, num_thread);
+	}
 	if (vm.count("benders")) {
 		report << "BENDERS:" << endl;
 		switch (vm["benders"].as<int>())
@@ -206,6 +212,9 @@ int main(int argc, char* argv[])
 	}
 	if (vm.count("valuefunc")) {
 		report << "VALUEFUNC:" << endl << run_model<value_func_model>(env, *prob, "VALUE FUNC MODEL", sols_obj, num_thread);
+	}
+	if (vm.count("xtbenders")) {
+		report << "XT-BENDERS:" << endl << run_model<benders_xt_model>(env, *prob, "XT BENDERS MODEL", sols_obj, num_thread);
 	}
 
 	// Print report
