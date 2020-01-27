@@ -400,7 +400,7 @@ std::string benders_xt_model::get_report()
 {
 	ostringstream ss;
 	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << cplex.getTime() << " s" <<
+		"TIME: " << getTime() << " s" <<
 		"    Sep " << separate_time << " s" <<
 		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
 		"    Sub " << (subprob_time * 100 / separate_time) << "%" << endl <<

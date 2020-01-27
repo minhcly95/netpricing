@@ -163,7 +163,7 @@ std::string standard_model_multi::get_report()
 
 	ostringstream ss;
 	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << cplex.getTime() << " s" << endl;
+		"TIME: " << getTime() << " s" << endl;
 
 	return ss.str();
 }

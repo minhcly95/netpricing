@@ -22,6 +22,7 @@ struct model_base {
 	IloEnv env;
 	IloModel cplex_model;
 	IloCplex cplex;
+	double time;
 
 	model_base(IloEnv& env) : env(env), cplex_model(env), cplex(cplex_model) { }
 
@@ -30,13 +31,19 @@ struct model_base {
 	}
 
 	virtual bool solve() {
-		cplex.resetTime();
-		return cplex.solve();
+		IloNum begin = cplex.getTime();
+		bool result = cplex.solve();
+		time = cplex.getTime() - begin;
+		return result;
 	}
 
 	virtual void end() {
 		cplex.end();
 		cplex_model.end();
+	}
+
+	double getTime() {
+		return time;
 	}
 
 	virtual solution get_solution() = 0;
@@ -97,6 +104,19 @@ struct model_with_generic_callbacks : public model_base {
 	}
 
 	virtual std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> attach_callbacks() = 0;
+};
+
+struct model_with_goal : public model_base {
+	IloCplex::Goal goal;
+
+	model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_base(env), goal(goal) {}
+
+	virtual bool solve() override {
+		IloNum begin = cplex.getTime();
+		bool result = cplex.solve(goal);
+		time = cplex.getTime() - begin;
+		return result;
+	}
 };
 
 struct model_single {

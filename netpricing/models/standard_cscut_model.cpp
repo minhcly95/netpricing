@@ -1,4 +1,4 @@
-#include "standard_model.h"
+#include "standard_cscut_model.h"
 
 #include "../macros.h"
 #include "model_utils.h"
@@ -6,8 +6,69 @@
 #include <map>
 #include <utility>
 #include <sstream>
+#include <chrono>
 
-standard_model::standard_model(IloEnv& env, const problem& _prob) : model_base(env), model_single(_prob) {
+ILOCPLEXGOAL1(standard_cscut_model_goal, standard_cscut_model&, m) {
+	using namespace std;
+	using NumArray = standard_cscut_model::NumArray;
+	using NumMatrix = standard_cscut_model::NumMatrix;
+	using RangeArray = standard_cscut_model::RangeArray;
+
+	auto start = chrono::high_resolution_clock::now();
+
+	IloEnv env(getEnv());
+	double tol = m.cplex.getParam(IloCplex::Param::Simplex::Tolerances::Feasibility);
+
+	if (isIntegerFeasible())
+		return 0;
+
+	bool found = false;
+	IloCplex::Goal next_goal = BranchAsCplexGoal(env);
+
+	NumArray x_lbs(env, m.A1);
+
+	// Find a cs cut
+	LOOP(k, m.K) {
+		getLBs(x_lbs, m.x[k]);
+		LOOP(a, m.A1) {
+			// Only test the variables which are fixed to 1
+			if (x_lbs[a] == 1) {
+				// Slackness test
+				IloRange dual_con = m.dual_feas[k][A1_TO_A(m.prob, a)];
+				double slack = getSlack(dual_con);
+
+				// Slacked constraint found
+				if (abs(slack) > tol) {
+					//cout << getNodeId() << "\t" << k << "\t" << a << "\t" << slack << endl;
+					IloNumExprArg expr = dual_con.getExpr();
+					double bound = dual_con.getUB();
+
+					//cout << dual_con << endl;
+					//cout << (expr == bound) << endl;
+
+					// Complementary slackness cut
+					++m.cut_count;
+					next_goal = (expr == bound);
+					found = true;
+					break;
+				}
+			}
+		}
+		if (found)
+			break;
+	}
+
+	x_lbs.end();
+
+	auto end = chrono::high_resolution_clock::now();
+	m.goal_time += chrono::duration<double>(end - start).count();
+
+	return AndGoal(next_goal, this);
+}
+
+standard_cscut_model::standard_cscut_model(IloEnv& env, const problem& _prob) :
+	model_with_goal(env, standard_cscut_model_goal(env, *this)), model_single(_prob),
+	goal_time(0), cut_count(0) {
 	// Typedef
 	using namespace std;
 	using namespace boost;
@@ -55,9 +116,7 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model_base(e
 
 	// Flow matrix
 	LOOP(a, A) {
-		auto edge = prob.alledges_index_map.left.at(a);
-		int src = source(edge, prob.graph);
-		int dst = target(edge, prob.graph);
+		SRC_DST_FROM_A(prob, a);
 
 		LOOP(k, K) flow_constr[k][src].setLinearCoef(z[k][a], 1);
 		LOOP(k, K) flow_constr[k][dst].setLinearCoef(z[k][a], -1);
@@ -67,9 +126,7 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model_base(e
 	dual_feas = RangeMatrix(env, K);
 	LOOP(k, K) dual_feas[k] = RangeArray(env, A);
 	LOOP(a, A) {
-		auto edge = prob.alledges_index_map.left.at(a);
-		int src = source(edge, prob.graph);
-		int dst = target(edge, prob.graph);
+		SRC_DST_FROM_A(prob, a);
 		bool is_tolled = prob.is_tolled_map[edge];
 		cost_type cost = prob.cost_map[edge];
 
@@ -83,7 +140,7 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model_base(e
 	// Equal objective
 	equal_obj = RangeArray(env, K, 0, 0);
 	LOOP(a, A) {
-		auto edge = prob.alledges_index_map.left.at(a);
+		auto edge = A_TO_EDGE(prob, a);
 		cost_type cost = prob.cost_map[edge];
 		LOOP(k, K) equal_obj[k].setLinearCoef(z[k][a], cost);
 	}
@@ -137,7 +194,7 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model_base(e
 	}
 }
 
-solution standard_model::get_solution()
+solution standard_cscut_model::get_solution()
 {
 	NumMatrix zvals = get_values(cplex, z);
 	NumArray tvals = get_values(cplex, t);
@@ -150,13 +207,15 @@ solution standard_model::get_solution()
 	return sol;
 }
 
-std::string standard_model::get_report()
+std::string standard_cscut_model::get_report()
 {
 	using namespace std;
 
 	ostringstream ss;
 	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << getTime() << " s" << endl;
+		"TIME: " << getTime() << " s" <<
+		"    Goal " << goal_time << " s" << endl <<
+		"CUTS: " << cut_count << endl;
 
 	return ss.str();
 }
