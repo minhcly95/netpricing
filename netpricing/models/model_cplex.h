@@ -1,20 +1,8 @@
 #pragma once
 
-#include <ilcplex/ilocplex.h>
-
 #include "../model.h"
 
-struct model_cplex : public model_base {
-	using NumVarArray = IloNumVarArray;
-	using NumVarMatrix = IloArray<NumVarArray>;
-
-	using NumArray = IloNumArray;
-	using NumMatrix = IloArray<NumArray>;
-
-	using RangeArray = IloRangeArray;
-	using RangeMatrix = IloArray<RangeArray>;
-	using ConstraintArray = IloConstraintArray;
-
+struct model_cplex : public model_base, public cplex_def {
 	IloEnv env;
 	IloModel cplex_model;
 	IloCplex cplex;

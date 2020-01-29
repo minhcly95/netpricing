@@ -26,4 +26,6 @@
 
 #include "models/standard_model_multi.h"
 
+#include "routines/routines.h"
+
 #include "macros.h"

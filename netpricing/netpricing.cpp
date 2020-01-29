@@ -80,6 +80,8 @@ string run_model(IloEnv env, typename model_type::problem_type& prob, string mod
 	}
 }
 
+void run_routine(int index);
+
 int main(int argc, char* argv[])
 {
 	const int DEFAULT_NUM_THREADS = thread::hardware_concurrency();
@@ -88,6 +90,7 @@ int main(int argc, char* argv[])
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help,h", "display help message")
+		("routine,r", po::value<int>(), "run special routines")
 		("standard,s", "run standard model")
 		("vfcut", "run standard model with value function cuts")
 		("goal", "run standard model with CPLEX goals")
@@ -124,6 +127,12 @@ int main(int argc, char* argv[])
 	// Help
 	if (vm.count("help")) {
 		cout << desc << endl;
+		return 0;
+	}
+
+	// Special routine
+	if (vm.count("routine")) {
+		run_routine(vm["routine"].as<int>());
 		return 0;
 	}
 
@@ -276,4 +285,20 @@ int main(int argc, char* argv[])
 	delete prob;
 
 	return 0;
+}
+
+void run_routine(int index)
+{
+	switch (index)
+	{
+	case 0:
+		follower_solver_perftest();
+		break;
+	case 1:
+		follower_cplex_solver_perftest();
+		break;
+	default:
+		cerr << "Wrong routine number" << endl;
+		break;
+	}
 }

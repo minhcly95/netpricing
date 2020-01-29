@@ -5,6 +5,7 @@
 #include "solution.h"
 
 #include <utility>
+#include <ilcplex/ilocplex.h>
 
 struct model_base {
 	double time;
@@ -54,4 +55,16 @@ struct model_multi {
 			A2.push_back(map.size());
 		}
 	}
+};
+
+struct cplex_def {
+	using NumVarArray = IloNumVarArray;
+	using NumVarMatrix = IloArray<NumVarArray>;
+
+	using NumArray = IloNumArray;
+	using NumMatrix = IloArray<NumArray>;
+
+	using RangeArray = IloRangeArray;
+	using RangeMatrix = IloArray<RangeArray>;
+	using ConstraintArray = IloConstraintArray;
 };
