@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model.h"
+#include "model_cplex.h"
 #include <unordered_map>
 
 struct problem;

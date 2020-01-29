@@ -12,7 +12,7 @@
 #include "problem_multi.h"
 #include "problem_generator.h"
 
-#include "models/model.h"
+#include "models/model_cplex.h"
 #include "models/standard_model.h"
 #include "models/standard_goal_model.h"
 #include "models/standard_cscut_model.h"

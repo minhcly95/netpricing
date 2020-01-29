@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model.h"
+#include "model_cplex.h"
 
 struct problem;
 

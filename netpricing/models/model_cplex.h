@@ -2,13 +2,9 @@
 
 #include <ilcplex/ilocplex.h>
 
-#include "../problem.h"
-#include "../problem_multi.h"
-#include "../solution.h"
+#include "../model.h"
 
-#include <utility>
-
-struct model_base {
+struct model_cplex : public model_base {
 	using NumVarArray = IloNumVarArray;
 	using NumVarMatrix = IloArray<NumVarArray>;
 
@@ -22,28 +18,23 @@ struct model_base {
 	IloEnv env;
 	IloModel cplex_model;
 	IloCplex cplex;
-	double time;
 
-	model_base(IloEnv& env) : env(env), cplex_model(env), cplex(cplex_model) { }
+	model_cplex(IloEnv& env) : env(env), cplex_model(env), cplex(cplex_model) { }
 
 	virtual IloCplex get_cplex() {
 		return cplex;
 	}
 
-	virtual bool solve() {
+	virtual bool solve() override {
 		IloNum begin = cplex.getTime();
 		bool result = cplex.solve();
 		time = cplex.getTime() - begin;
 		return result;
 	}
 
-	virtual void end() {
+	virtual void end() override {
 		cplex.end();
 		cplex_model.end();
-	}
-
-	double getTime() {
-		return time;
 	}
 
 	virtual solution get_solution() = 0;
@@ -51,20 +42,20 @@ struct model_base {
 	virtual std::string get_report() = 0;
 };
 
-struct model_with_callbacks : public model_base {
+struct model_with_callbacks : public model_cplex {
 	std::vector<IloCplex::Callback> callbacks;
 
-	model_with_callbacks(IloEnv& env) : model_base(env) {}
+	model_with_callbacks(IloEnv& env) : model_cplex(env) {}
 
 	virtual bool solve() override {
 		callbacks = attach_callbacks();
-		return model_base::solve();
+		return model_cplex::solve();
 	}
 
 	virtual void end() override {
 		for (auto& cb : callbacks)
 			cb.end();
-		model_base::end();
+		model_cplex::end();
 	}
 
 	virtual std::vector<IloCplex::Callback> attach_callbacks() = 0;
@@ -82,73 +73,39 @@ struct model_with_callback : public model_with_callbacks {
 	}
 };
 
-struct model_with_generic_callbacks : public model_base {
+struct model_with_generic_callbacks : public model_cplex {
 	using ContextId = CPXLONG;
 
 	std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> callbacks;
 
-	model_with_generic_callbacks(IloEnv& env) : model_base(env) {}
+	model_with_generic_callbacks(IloEnv& env) : model_cplex(env) {}
 
 	virtual bool solve() override {
 		callbacks = attach_callbacks();
 		for (auto& cb : callbacks)
 			cplex.use(cb.first, cb.second);
 
-		return model_base::solve();
+		return model_cplex::solve();
 	}
 
 	virtual void end() override {
 		for (auto& cb : callbacks)
 			delete cb.first;
-		model_base::end();
+		model_cplex::end();
 	}
 
 	virtual std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> attach_callbacks() = 0;
 };
 
-struct model_with_goal : public model_base {
+struct model_with_goal : public model_cplex {
 	IloCplex::Goal goal;
 
-	model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_base(env), goal(goal) {}
+	model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_cplex(env), goal(goal) {}
 
 	virtual bool solve() override {
 		IloNum begin = cplex.getTime();
 		bool result = cplex.solve(goal);
 		time = cplex.getTime() - begin;
 		return result;
-	}
-};
-
-struct model_single {
-	using problem_type = problem;
-
-	problem prob;
-	int K, V, A, A1, A2;
-
-	model_single(const problem& _prob) : prob(_prob) {
-		K = prob.commodities.size();
-		V = boost::num_vertices(prob.graph);
-		A = boost::num_edges(prob.graph);
-		A1 = prob.tolled_index_map.size();
-		A2 = prob.tollfree_index_map.size();
-	}
-};
-
-struct model_multi {
-	using problem_type = problem_multi;
-
-	problem_multi prob;
-	int K, V, A, A1;
-	std::vector<int> A2;
-
-	model_multi(const problem_multi& _prob) : prob(_prob) {
-		K = prob.commodities.size();
-		V = boost::num_vertices(prob.graphs[0]);
-		A = prob.max_edge_index;
-		A1 = prob.tolled_index_common_map.size();
-
-		for (auto& map : prob.tollfree_index_maps) {
-			A2.push_back(map.size());
-		}
 	}
 };

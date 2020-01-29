@@ -15,7 +15,7 @@ using namespace boost;
 struct value_func_model_callback : public IloCplex::Callback::Function {
 	value_func_model& m;
 	double tol;
-	model_base::NumVarArray heur_vars;
+	model_cplex::NumVarArray heur_vars;
 
 	value_func_model_callback(value_func_model& _m)
 		: m(_m), tol(1e-6), heur_vars(m.get_cplex().getEnv()) {

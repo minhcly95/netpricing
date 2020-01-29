@@ -7,7 +7,7 @@
 #include <utility>
 #include <sstream>
 
-standard_model_multi::standard_model_multi(IloEnv& env, const problem_multi& _prob) : model_base(env), model_multi(_prob) {
+standard_model_multi::standard_model_multi(IloEnv& env, const problem_multi& _prob) : model_cplex(env), model_multi(_prob) {
 	// Typedef
 	using namespace std;
 	using namespace boost;

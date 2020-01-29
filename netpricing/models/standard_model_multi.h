@@ -1,10 +1,10 @@
 #pragma once
 
-#include "model.h"
+#include "model_cplex.h"
 
 struct problem;
 
-struct standard_model_multi : public model_base, public model_multi {
+struct standard_model_multi : public model_cplex, public model_multi {
 	// Variables
 	NumVarMatrix x;
 	NumVarMatrix y;

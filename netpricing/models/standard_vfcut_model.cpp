@@ -17,7 +17,7 @@ using namespace boost;
 struct standard_vfcut_model_callback : public IloCplex::Callback::Function {
 	standard_vfcut_model& m;
 	double tol;
-	model_base::NumVarArray heur_vars;
+	model_cplex::NumVarArray heur_vars;
 
 	standard_vfcut_model_callback(standard_vfcut_model& _m)
 		: m(_m), tol(1e-6), heur_vars(m.get_cplex().getEnv()) {
