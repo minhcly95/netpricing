@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
 		("benders", po::value<int>(), "run Benders model (arg is 0, 1, or 2)")
 		("valuefunc", "run value function model")
 		("xtbenders", "run xT Benders model")
+		("slackbr", "run slack-branch model")
 		("multi", "run multi-graph version")
 		("input,i", po::value<string>(), "input problem from file")
 		("output,o", po::value<string>()->default_value("report.json"), "output report file")
@@ -252,6 +253,9 @@ int main(int argc, char* argv[])
 	}
 	if (vm.count("xtbenders")) {
 		report << "XT-BENDERS:" << endl << run_model<benders_xt_model>(env, *prob, "XT BENDERS MODEL", conf);
+	}
+	if (vm.count("slackbr")) {
+		report << "SLACKBRANCH:" << endl << run_model<slackbranch_model>(env, *prob, "SLACK-BRANCH MODEL", conf);
 	}
 
 	// Print report

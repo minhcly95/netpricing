@@ -22,6 +22,7 @@
 #include "models/benders_model_reduced2.h"
 #include "models/value_func_model.h"
 #include "models/benders_xt_model.h"
+#include "models/slackbranch_model.h"
 
 #include "models/standard_model_multi.h"
 
