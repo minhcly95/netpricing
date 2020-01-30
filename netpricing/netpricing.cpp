@@ -291,12 +291,10 @@ void run_routine(int index)
 {
 	switch (index)
 	{
-	case 0:
-		follower_solver_perftest();
-		break;
-	case 1:
-		follower_cplex_solver_perftest();
-		break;
+	case 0: follower_solver_perftest(); break;
+	case 1: follower_cplex_solver_perftest(); break;
+	case 2: follower_light_solver_perftest(); break;
+	case 3: follower_solver_acctest(); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;

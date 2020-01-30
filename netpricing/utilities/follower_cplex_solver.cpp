@@ -1,14 +1,13 @@
 #include "follower_cplex_solver.h"
-#include "macros.h"
+#include "../macros.h"
 
 #include <algorithm>
-#include <chrono>
 
 using namespace std;
 using namespace boost;
 
-follower_cplex_solver::follower_cplex_solver(IloEnv& env, const problem& prob) :
-	model_single(prob), env(env), cplex_model(env, K), cplex(env, K), time(0)
+follower_cplex_solver::follower_cplex_solver(IloEnv& env, const problem& _prob) :
+	follower_solver_base(_prob), env(env), cplex_model(env, K), cplex(env, K)
 {
 	// Typedef
 	using graph_type = problem::graph_type;
@@ -71,14 +70,12 @@ follower_cplex_solver::follower_cplex_solver(IloEnv& env, const problem& prob) :
 	}
 }
 
-vector<follower_cplex_solver::path> follower_cplex_solver::solve(const vector<cost_type>& tolls)
+vector<follower_cplex_solver::path> follower_cplex_solver::solve_impl(const vector<cost_type>& tolls)
 {
-	auto start = chrono::high_resolution_clock::now();
-
 	// Add toll
 	LOOP(k, K) LOOP(a, A1) {
 		auto edge = A1_TO_EDGE(prob, a);
-		obj[k].setLinearCoef(x[k][a], prob.cost_map[edge] + tolls[a]);
+		obj[k].setLinearCoef(x[k][a], prob.cost_map[edge] + tolls[a] * 0.9999);	// Prefer tolled arcs
 	}
 
 	// Solve
@@ -113,9 +110,6 @@ vector<follower_cplex_solver::path> follower_cplex_solver::solve(const vector<co
 	}
 
 	zvals.end();
-
-	auto end = chrono::high_resolution_clock::now();
-	time += chrono::duration<double>(end - start).count();
 
 	return paths;
 }

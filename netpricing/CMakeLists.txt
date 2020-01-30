@@ -14,9 +14,8 @@ add_executable(netpricing
 	"problem_multi.cpp"
 	"problem_generator.cpp"
 	"solution.cpp"
-	"follower_solver.cpp"
-	"follower_cplex_solver.cpp"
 	"shullpro/s_hull_pro.cpp"
+
 	"models/model_utils.cpp"
 	"models/standard_model.cpp"
 	"models/standard_goal_model.cpp"
@@ -29,7 +28,15 @@ add_executable(netpricing
 	"models/benders_xt_model.cpp"
 	"models/slackbranch_model.cpp"
 	"models/value_func_model.cpp"
-	"routines/follower_solver_perftest.cpp")
+	
+	"utilities/follower_solver_base.cpp"
+	"utilities/follower_solver.cpp"
+	"utilities/follower_cplex_solver.cpp"
+	"utilities/follower_light_solver.cpp"
+
+	"routines/follower_solver_perftest.cpp"
+
+	"graph/light_graph.cpp")
 
 target_link_libraries(netpricing
 	-lilocplex

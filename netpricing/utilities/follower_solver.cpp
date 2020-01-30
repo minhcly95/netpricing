@@ -1,14 +1,13 @@
 #include "follower_solver.h"
-#include "macros.h"
+#include "../macros.h"
 
 #include <algorithm>
-#include <chrono>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 
 using namespace std;
 using namespace boost;
 
-follower_solver::follower_solver(const problem& prob) : model_single(prob), time(0)
+follower_solver::follower_solver(const problem& _prob) : follower_solver_base(_prob)
 {
 	// Copy a new cost map
 	problem::edge_iterator ei, ei_end;
@@ -16,10 +15,8 @@ follower_solver::follower_solver(const problem& prob) : model_single(prob), time
 		tolled_cost_map[*ei] = prob.cost_map[*ei];
 }
 
-vector<follower_solver::path> follower_solver::solve(const vector<cost_type>& tolls)
+vector<follower_solver::path> follower_solver::solve_impl(const vector<cost_type>& tolls)
 {
-	auto start = chrono::high_resolution_clock::now();
-
 	// Add toll to new cost map
 	LOOP(a, A1) {
 		auto edge = A1_TO_EDGE(prob, a);
@@ -47,9 +44,6 @@ vector<follower_solver::path> follower_solver::solve(const vector<cost_type>& to
 
 		std::reverse(paths[k].begin(), paths[k].end());
 	}
-
-	auto end = chrono::high_resolution_clock::now();
-	time += chrono::duration<double>(end - start).count();
 
 	return paths;
 }

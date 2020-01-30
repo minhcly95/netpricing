@@ -2,13 +2,10 @@
 
 #include <ilcplex/ilocplex.h>
 
-#include "problem.h"
-#include "model.h"
+#include "follower_solver_base.h"
 
-struct follower_cplex_solver : public model_single, public cplex_def
+struct follower_cplex_solver : public follower_solver_base, public cplex_def
 {
-	using path = std::vector<int>;
-
 	IloEnv env;
 	IloArray<IloModel> cplex_model;
 	IloArray<IloCplex> cplex;
@@ -20,10 +17,8 @@ struct follower_cplex_solver : public model_single, public cplex_def
 	IloArray<IloObjective> obj;
 	RangeMatrix flow_constr;
 
-	double time;
-
 	follower_cplex_solver(IloEnv& env, const problem& prob);
 	virtual ~follower_cplex_solver();
 
-	std::vector<path> solve(const std::vector<cost_type>& tolls);
+	virtual std::vector<path> solve_impl(const std::vector<cost_type>& tolls) override;
 };
