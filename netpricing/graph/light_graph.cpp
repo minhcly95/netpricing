@@ -8,16 +8,20 @@ light_graph::light_graph(const problem_base::graph_type& graph) :
 	V(boost::num_vertices(graph)), E(V)
 {
 	auto cost_map = boost::get(boost::edge_weight, graph);
+	auto is_tolled_map = boost::get(edge_tolled, graph);
 
 	problem_base::edge_iterator ei, ei_end;
 	for (tie(ei, ei_end) = boost::edges(graph); ei != ei_end; ++ei) {
 		int src = boost::source(*ei, graph);
 		int dst = boost::target(*ei, graph);
 		cost_type cost = cost_map[*ei];
+		bool is_tolled = is_tolled_map[*ei];
+
 		E[src][dst] = light_edge{
 			.src = src,
 			.dst = dst,
 			.cost = cost,
+			.is_tolled = is_tolled,
 			.toll = 0,
 			.enabled = true
 		};
@@ -40,11 +44,12 @@ light_graph::path light_graph::shortest_path(int from, int to)
 	// Until queue is empty
 	while (!queue.empty()) {
 		int src = queue.top().second;
-		queue.pop();
 
 		// Break if destination reached
 		if (src == to)
 			break;
+
+		queue.pop();
 
 		// Already closed
 		if (closed[src])
@@ -76,6 +81,10 @@ light_graph::path light_graph::shortest_path(int from, int to)
 		closed[src] = true;
 	}
 
+	// If the queue is empty, the destination was not reached
+	if (queue.empty())
+		return path();
+
 	// Trace back the path
 	path p;
 	int curr = to;
@@ -87,4 +96,16 @@ light_graph::path light_graph::shortest_path(int from, int to)
 	std::reverse(p.begin(), p.end());
 
 	return p;
+}
+
+double light_graph::get_path_cost(const path& p)
+{
+	double sum = 0;
+
+	for (int i = 0; i < p.size() - 1; i++) {
+		const auto& edge = E[p[i]][p[i + 1]];
+		sum += edge.cost + edge.toll;
+	}
+
+	return sum;
 }

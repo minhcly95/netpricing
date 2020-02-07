@@ -61,8 +61,8 @@ string run_model(IloEnv env, typename model_type::problem_type& prob, string mod
 			throw(-1);
 		}
 
-		env.out() << "Solution status = " << cplex.getStatus() << endl;
-		env.out() << "Solution value = " << cplex.getObjValue() << endl;
+		/*env.out() << "Solution status = " << cplex.getStatus() << endl;
+		env.out() << "Solution value = " << cplex.getObjValue() << endl;*/
 		string report = model.get_report();
 
 		json sol_obj = model.get_solution().get_json(prob);
@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
 		("valuefunc", "run value function model")
 		("xtbenders", "run xT Benders model")
 		("slackbr", "run slack-branch model")
+		("csenum", "run complementary slackness enumeration")
 		("multi", "run multi-graph version")
 		("input,i", po::value<string>(), "input problem from file")
 		("output,o", po::value<string>()->default_value("report.json"), "output report file")
@@ -265,6 +266,9 @@ int main(int argc, char* argv[])
 	}
 	if (vm.count("slackbr")) {
 		report << "SLACKBRANCH:" << endl << run_model<slackbranch_model>(env, *prob, "SLACK-BRANCH MODEL", conf);
+	}
+	if (vm.count("csenum")) {
+		report << "CS ENUM:" << endl << run_model<csenum>(env, *prob, "COMP-SLACK ENUM", conf);
 	}
 
 	// Print report

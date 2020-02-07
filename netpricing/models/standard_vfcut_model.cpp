@@ -362,7 +362,7 @@ std::string standard_vfcut_model::get_report()
 {
 	ostringstream ss;
 	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << getTime() << " s" <<
+		"TIME: " << get_time() << " s" <<
 		"    Sep " << separate_time << " s" <<
 		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
 		"    Sub " << (subprob_time * 100 / separate_time) << "%" << endl <<

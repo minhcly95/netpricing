@@ -227,7 +227,7 @@ std::string slackbranch_model::get_report()
 
 	ostringstream ss;
 	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << getTime() << " s" <<
+		"TIME: " << get_time() << " s" <<
 		"    Goal " << goal_time << " s" << endl;
 
 	return ss.str();

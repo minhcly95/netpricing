@@ -26,6 +26,8 @@
 
 #include "models/standard_model_multi.h"
 
+#include "csenum/csenum.h"
+
 #include "routines/routines.h"
 
 #include "macros.h"

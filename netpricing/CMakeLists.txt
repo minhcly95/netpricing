@@ -29,6 +29,9 @@ add_executable(netpricing
 	"models/slackbranch_model.cpp"
 	"models/value_func_model.cpp"
 	
+	"csenum/csenum.cpp"
+	"csenum/csenum_node.cpp"
+	
 	"utilities/follower_solver_base.cpp"
 	"utilities/follower_solver.cpp"
 	"utilities/follower_cplex_solver.cpp"

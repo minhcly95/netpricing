@@ -14,7 +14,7 @@ struct model_base {
 
 	virtual void end() { }
 
-	double getTime() {
+	double get_time() {
 		return time;
 	}
 
@@ -60,6 +60,8 @@ struct model_multi {
 struct cplex_def {
 	using NumVarArray = IloNumVarArray;
 	using NumVarMatrix = IloArray<NumVarArray>;
+	using VarArray = NumVarArray;
+	using VarMatrix = NumVarMatrix;
 
 	using NumArray = IloNumArray;
 	using NumMatrix = IloArray<NumArray>;
