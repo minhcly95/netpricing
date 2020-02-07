@@ -6,8 +6,8 @@
 #include <boost/bimap.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/filtered_graph.hpp>
-#include <nlohmann/json.hpp>
 
+#include "nlohmann/json.hpp"
 #include "commodity.h"
 #include "edge_tollfree_predicate.h"
 #include "typedef.h"

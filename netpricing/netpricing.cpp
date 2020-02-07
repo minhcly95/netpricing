@@ -12,7 +12,8 @@
 #include <regex>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/program_options.hpp>
-#include <nlohmann/json.hpp>
+
+#include "nlohmann/json.hpp"
 
 using namespace std;
 using namespace boost;

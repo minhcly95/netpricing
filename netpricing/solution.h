@@ -4,7 +4,7 @@
 #include "problem_multi.h"
 
 #include <vector>
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 struct solution {
 
