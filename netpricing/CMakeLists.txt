@@ -26,6 +26,7 @@ add_executable(netpricing
 	"models/benders_model_reduced.cpp"
 	"models/benders_model_reduced2.cpp"
 	"models/benders_xt_model.cpp"
+	"models/benders_xyt_model.cpp"
 	"models/slackbranch_model.cpp"
 	"models/value_func_model.cpp"
 	
