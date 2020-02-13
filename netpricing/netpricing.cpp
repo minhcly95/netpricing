@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
 		("benders", po::value<int>(), "run Benders model (arg is 0, 1, or 2)")
 		("valuefunc", "run value function model")
 		("xtbenders", "run xT Benders model")
+		("xybenders", "run xy Benders model")
 		("xytbenders", "run xyT Benders model")
 		("slackbr", "run slack-branch model")
 		("csenum", "run complementary slackness enumeration")
@@ -265,6 +266,9 @@ int main(int argc, char* argv[])
 	}
 	if (vm.count("xtbenders")) {
 		report << "XT-BENDERS:" << endl << run_model<benders_xt_model>(env, *prob, "XT BENDERS MODEL", conf);
+	}
+	if (vm.count("xybenders")) {
+		report << "XY-BENDERS:" << endl << run_model<benders_xy_model>(env, *prob, "XY BENDERS MODEL", conf);
 	}
 	if (vm.count("xytbenders")) {
 		report << "XYT-BENDERS:" << endl << run_model<benders_xyt_model>(env, *prob, "XYT BENDERS MODEL", conf);
