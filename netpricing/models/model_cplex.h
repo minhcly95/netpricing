@@ -7,17 +7,24 @@ struct model_cplex : public model_base, public cplex_def {
 	IloModel cplex_model;
 	IloCplex cplex;
 
-	model_cplex(IloEnv& env) : env(env), cplex_model(env), cplex(cplex_model) { }
+	model_cplex(IloEnv& env) : env(env), cplex_model(env), cplex(cplex_model) {
+		cplex.setParam(IloCplex::ClockType, 2);
+	}
 
 	virtual IloCplex get_cplex() {
 		return cplex;
 	}
 
-	virtual bool solve() override {
-		IloNum begin = cplex.getTime();
-		bool result = cplex.solve();
-		time = cplex.getTime() - begin;
-		return result;
+	virtual bool solve_impr() override {
+		return cplex.solve();
+	}
+
+	virtual void config(const model_config& conf) override {
+		cplex.setParam(IloCplex::Threads, conf.num_thread);
+		cplex.setParam(IloCplex::Param::MIP::Strategy::VariableSelect, conf.var_select);
+		if (conf.time_limit > 0) {
+			cplex.setParam(IloCplex::Param::TimeLimit, conf.time_limit);
+		}
 	}
 
 	virtual void end() override {
@@ -35,7 +42,7 @@ struct model_with_callbacks : public model_cplex {
 
 	model_with_callbacks(IloEnv& env) : model_cplex(env) {}
 
-	virtual bool solve() override {
+	virtual bool solve_impr() override {
 		callbacks = attach_callbacks();
 		return model_cplex::solve();
 	}
@@ -68,7 +75,7 @@ struct model_with_generic_callbacks : public model_cplex {
 
 	model_with_generic_callbacks(IloEnv& env) : model_cplex(env) {}
 
-	virtual bool solve() override {
+	virtual bool solve_impr() override {
 		callbacks = attach_callbacks();
 		for (auto& cb : callbacks)
 			cplex.use(cb.first, cb.second);
@@ -90,10 +97,7 @@ struct model_with_goal : public model_cplex {
 
 	model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_cplex(env), goal(goal) {}
 
-	virtual bool solve() override {
-		IloNum begin = cplex.getTime();
-		bool result = cplex.solve(goal);
-		time = cplex.getTime() - begin;
-		return result;
+	virtual bool solve_impr() override {
+		return cplex.solve(goal);
 	}
 };

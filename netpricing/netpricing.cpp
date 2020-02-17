@@ -48,14 +48,11 @@ string run_model(IloEnv env, typename model_type::problem_type& prob, string mod
 		cout << model_name << endl;
 
 		model_type model(env, prob);
-
-		IloCplex cplex = model.get_cplex();
-		cplex.setParam(IloCplex::ClockType, 2);
-		cplex.setParam(IloCplex::Threads, conf.num_thread);
-		cplex.setParam(IloCplex::Param::MIP::Strategy::VariableSelect, conf.var_select);
-		if (conf.time_limit > 0) {
-			cplex.setParam(IloCplex::Param::TimeLimit, conf.time_limit);
-		}
+		model.config(model_config{
+			.num_thread = conf.num_thread,
+			.var_select = conf.var_select,
+			.time_limit = conf.time_limit
+					 });
 
 		if (!model.solve()) {
 			env.error() << "Failed to optimize LP." << endl;

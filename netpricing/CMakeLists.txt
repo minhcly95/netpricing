@@ -52,5 +52,6 @@ target_link_libraries(netpricing
 	${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 target_compile_definitions(netpricing PUBLIC -DIL_STD)
+target_compile_options(netpricing PRIVATE -Wno-ignored-attributes)
 
 # TODO: Add tests and install targets if needed.

@@ -5,12 +5,29 @@
 #include "solution.h"
 
 #include <utility>
+#include <chrono>
 #include <ilcplex/ilocplex.h>
 
+struct model_config {
+	int num_thread;
+	int var_select;
+	int time_limit;
+};
+
 struct model_base {
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 	double time;
 
-	virtual bool solve() = 0;
+	virtual bool solve_impr() = 0;
+	bool solve() {
+		start_time = std::chrono::high_resolution_clock::now();
+		bool res = solve_impr();
+		auto end = std::chrono::high_resolution_clock::now();
+		time = std::chrono::duration<double>(end - start_time).count();
+		return res;
+	}
+
+	virtual void config(const model_config& config) = 0;
 
 	virtual void end() { }
 

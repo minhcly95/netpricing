@@ -8,7 +8,7 @@ using namespace std;
 csenum::csenum(IloEnv& _env, const problem& _prob) :
 	model_single(_prob), primal_lgraph(prob.graph),
 	env(_env), dual_model(env), dual_cplex(dual_model),
-	queue(), node_count(0), step_count(0)
+	queue(), node_count(0), step_count(0), time_limit(0)
 {
 	build_dual_model();
 
@@ -88,6 +88,7 @@ void csenum::solve_root()
 
 	// Update violated constraints and feasibility test
 	root_node.update_violated();
+	print_node(root_node);
 
 	if (root_node.is_feasible())
 		best_node = root_node;
@@ -96,6 +97,7 @@ void csenum::solve_root()
 
 	// Statistics
 	node_count++;
+	step_count++;
 }
 
 void print_lineage(const vector<csenum_branch>& lineage) {
@@ -110,11 +112,15 @@ void csenum::step()
 	csenum_node node = std::move(queue.top());
 	queue.pop();
 
-	printf("Node %2d : %2d - bound %5.0f - depth %2d - violated %2d", node.index, node.parent, node.bound, node.get_depth(), node.get_num_violated());
+	if (step_count % 100 == 0) {
+		print_node(node);
+	}
 
-	cout << endl;
-	print_lineage(node.lineage);
-	cout << endl;
+	//printf("Node %2d : %2d - bound %5.0f - depth %2d - violated %2d", node.index, node.parent, node.bound, node.get_depth(), node.get_num_violated());
+
+	//cout << endl;
+	//print_lineage(node.lineage);
+	//cout << endl;
 
 	// Process lineage
 	vector<vector<int>> primal_coors(K);
@@ -149,7 +155,7 @@ void csenum::step()
 		// Find the best improvement
 		set_primal_state(primal_coors[k]);
 		for (int a : vk) {
-			printf("  %2d.%2d ", k, a);
+			//printf("  %2d.%2d ", k, a);
 			// Primal improvement
 			push_primal_state(a);
 			auto path = primal_lgraph.shortest_path(comm.origin, comm.destination);
@@ -160,11 +166,11 @@ void csenum::step()
 				primal_impr = cost - node.primal_objs[k];
 			}
 			pop_primal_state();
-			printf("- P = %f ", primal_impr);
+			//printf("- P = %f ", primal_impr);
 
 			// Early break
 			if (primal_impr >= 0 && primal_impr <= best_impr) {
-				cout << endl;
+				//cout << endl;
 				continue;
 			}
 
@@ -172,8 +178,8 @@ void csenum::step()
 			push_dual_state(csenum_coor{ .k = k, .a = a });
 			bool dual_feasible = dual_cplex.solve();
 			double dual_impr = dual_feasible ? node.dual_obj - dual_cplex.getObjValue() : -1;
-			printf("- D = %f ", dual_impr);
-			cout << endl;
+			//printf("- D = %f ", dual_impr);
+			//cout << endl;
 
 			// Overall improvement (min of the two impr-s)
 			double impr = (primal_impr < dual_impr && primal_impr >= 0) ? primal_impr : dual_impr;
@@ -193,8 +199,8 @@ void csenum::step()
 		}
 	}
 
-	printf("  best impr %f ", best_impr);
-	cout << endl;
+	//printf("  best impr %f ", best_impr);
+	//cout << endl;
 
 	// Primal node (only if primal is feasible)
 	if (best_primal_impr >= 0) {
@@ -212,8 +218,10 @@ void csenum::step()
 		primal_node.update_violated(best_coor.k);
 
 		if (primal_node.is_feasible()) {
-			if (primal_node.bound > best_node.bound)
+			if (primal_node.bound > best_node.bound) {
 				best_node = primal_node;
+				print_node(primal_node, true);
+			}
 		}
 		else {
 			queue.emplace(std::move(primal_node));
@@ -237,8 +245,10 @@ void csenum::step()
 		dual_node.update_violated();
 
 		if (dual_node.is_feasible()) {
-			if (dual_node.bound > best_node.bound)
+			if (dual_node.bound > best_node.bound) {
 				best_node = dual_node;
+				print_node(dual_node, true);
+			}
 		}
 		else {
 			queue.emplace(std::move(dual_node));
@@ -332,9 +342,47 @@ double csenum::get_best_bound()
 		return -numeric_limits<double>::infinity();
 }
 
-bool csenum::solve()
+void csenum::print_node(const csenum_node& node, bool feasible)
 {
-	auto start = chrono::high_resolution_clock::now();
+	double best_obj = get_best_obj();
+	double gap = 100 * (node.bound - best_obj) / best_obj;
+
+	char last_branch_str[25];
+	if (!node.lineage.empty()) {
+		const auto& last_branch = node.lineage.back();
+		SRC_DST_FROM_A(prob, last_branch.a);
+		bool is_tolled = prob.is_tolled_map[edge];
+		sprintf(last_branch_str, "%s[%d,%d->%d] %s", is_tolled ? "x" : "y", last_branch.k, src, dst, last_branch.dir ? "D" : "P");
+	}
+	else
+		last_branch_str[0] = '\0';
+
+	auto now = std::chrono::high_resolution_clock::now();
+	double curr_time = std::chrono::duration<double>(now - start_time).count();
+
+	printf("%s%5d %5d %5ld %5d %6d %5d %4d %10.3f %10.3f %5.2f %15s %7.1f",
+		   feasible ? "*" : " ",
+		   node_count,
+		   step_count,
+		   queue.size(),
+		   node.index,
+		   node.parent,
+		   node.get_depth(),
+		   node.get_num_violated(),
+		   node.bound,
+		   best_obj,
+		   gap,
+		   last_branch_str,
+		   curr_time
+	);
+	cout << endl;
+}
+
+bool csenum::solve_impr()
+{
+	// Print header
+	printf("  Node  Step  Left Index Parent Depth Vltd      Bound    BestObj   Gap      LastBranch    Time");
+	cout << endl;
 
 	// Solve root node
 	solve_root();
@@ -344,12 +392,21 @@ bool csenum::solve()
 		if (get_best_bound() <= get_best_obj())
 			break;
 		step();
+
+		if (time_limit > 0) {
+			auto now = std::chrono::high_resolution_clock::now();
+			double curr_time = std::chrono::duration<double>(now - start_time).count();
+			if (curr_time >= time_limit)
+				break;
+		}
 	}
 
-	auto end = chrono::high_resolution_clock::now();
-	time = chrono::duration<double>(end - start).count();
-
 	return true;
+}
+
+void csenum::config(const model_config& config)
+{
+	time_limit = config.time_limit;
 }
 
 solution csenum::get_solution()
@@ -368,9 +425,4 @@ string csenum::get_report()
 	ss << "OBJ: " << get_best_obj() << endl <<
 		"TIME: " << get_time() << " s" << endl;
 	return ss.str();
-}
-
-IloCplex csenum::get_cplex()
-{
-	return dual_cplex;
 }

@@ -5,6 +5,7 @@
 #include "csenum_node.h"
 
 #include <queue>
+#include <chrono>
 
 struct csenum : public model_base, public model_single, public cplex_def {
 	light_graph primal_lgraph;
@@ -29,6 +30,7 @@ struct csenum : public model_base, public model_single, public cplex_def {
 	// Statistics
 	int node_count;
 	int step_count;
+	double time_limit;
 
 	// Constructor
 	csenum(IloEnv& env, const problem& prob);
@@ -55,10 +57,12 @@ struct csenum : public model_base, public model_single, public cplex_def {
 	double get_best_obj();
 	double get_best_bound();
 
+	// Utilities
+	void print_node(const csenum_node& node, bool feasible = false);
+
 	// Inherited via model_base
-	virtual bool solve() override;
+	virtual bool solve_impr() override;
 	virtual solution get_solution() override;
 	virtual std::string get_report() override;
-
-	IloCplex get_cplex();
+	virtual void config(const model_config& config) override;
 };
