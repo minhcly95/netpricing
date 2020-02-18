@@ -412,9 +412,11 @@ void csenum::config(const model_config& config)
 solution csenum::get_solution()
 {
 	solution sol;
-	sol.paths = best_node.paths;
-	LOOP(a, A1) {
-		sol.tolls.push_back(best_node.t[a]);
+	if (best_node.index >= 0) {
+		sol.paths = best_node.paths;
+		LOOP(a, A1) {
+			sol.tolls.push_back(best_node.t[a]);
+		}
 	}
 	return sol;
 }

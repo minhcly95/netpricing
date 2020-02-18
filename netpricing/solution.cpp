@@ -30,7 +30,7 @@ json solution::get_json(const problem& prob) const
 
 	// Tolls
 	json tolls_obj;
-	LOOP(a, prob.tolled_index_map.size()) {
+	LOOP(a, tolls.size()) {
 		SRC_DST_FROM_A1(prob, a);
 		json arc_obj;
 		arc_obj["src"] = src + 1;
