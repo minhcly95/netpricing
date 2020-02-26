@@ -42,7 +42,7 @@ void print_src_dst(P& prob, T& model) {
 }
 
 template <class model_type>
-string run_model(IloEnv env, typename model_type::problem_type& prob, string model_name, config& conf) {
+string run_model(IloEnv& env, typename model_type::problem_type& prob, string model_name, config& conf) {
 	try {
 		cout << "--------------------------------------" << endl;
 		cout << model_name << endl;

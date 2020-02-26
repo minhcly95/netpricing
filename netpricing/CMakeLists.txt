@@ -33,6 +33,7 @@ add_executable(netpricing
 	
 	"csenum/csenum.cpp"
 	"csenum/csenum_node.cpp"
+	"csenum/csenum_solver.cpp"
 	
 	"utilities/follower_solver_base.cpp"
 	"utilities/follower_solver.cpp"

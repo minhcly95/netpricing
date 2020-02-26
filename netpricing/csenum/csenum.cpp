@@ -6,52 +6,16 @@
 using namespace std;
 
 csenum::csenum(IloEnv& _env, const problem& _prob) :
-	model_single(_prob), primal_lgraph(prob.graph),
-	env(_env), dual_model(env), dual_cplex(dual_model),
+	env(_env), solver(_env, _prob), prob(solver.prob),
+	K(solver.K), V(solver.V), A(solver.A), A1(solver.A1), A2(solver.A2),
 	queue(), node_count(0), step_count(0), time_limit(0)
 {
-	build_dual_model();
-
 	best_node = csenum_node {
 		.cse = this,
 		.index = -1,
 		.parent = -1,
 		.bound = -numeric_limits<double>::infinity()
 	};
-}
-
-void csenum::build_dual_model()
-{
-	lambda = VarMatrix(env, K);
-	LOOP(k, K) lambda[k] = VarArray(env, V, -IloInfinity, IloInfinity);
-
-	t = VarArray(env, A1, 0, IloInfinity);
-
-	dual_obj = IloMaximize(env);
-	LOOP(k, K) {
-		commodity& comm = prob.commodities[k];
-		dual_obj.setLinearCoef(lambda[k][comm.origin], comm.demand);
-		dual_obj.setLinearCoef(lambda[k][comm.destination], -comm.demand);
-	}
-
-	dual_feas = RangeMatrix(env, K);
-	LOOP(k, K) dual_feas[k] = RangeArray(env, A);
-	LOOP(a, A) {
-		SRC_DST_FROM_A(prob, a);
-		bool is_tolled = prob.is_tolled_map[edge];
-		cost_type cost = prob.cost_map[edge];
-
-		LOOP(k, K) {
-			dual_feas[k][a] = IloRange(lambda[k][src] - lambda[k][dst] <= cost);
-			if (is_tolled)
-				dual_feas[k][a].setLinearCoef(t[A_TO_A1(prob, a)], -1);
-		}
-	}
-
-	dual_model.add(dual_obj);
-	LOOP(k, K) dual_model.add(dual_feas[k]);
-
-	dual_cplex.setOut(env.getNullStream());
 }
 
 void csenum::solve_root()
@@ -65,26 +29,20 @@ void csenum::solve_root()
 	};
 
 	// Primal
-	LOOP(k, K) {
+	LOOP(k, solver.K) {
 		commodity& comm = prob.commodities[k];
-		vector<int> p = primal_lgraph.shortest_path(comm.origin, comm.destination);
-		root_node.primal_objs[k] = primal_lgraph.get_path_cost(p) * comm.demand;
-		root_node.paths.emplace_back(std::move(p));
+		solver.solve_primal(k);
+		root_node.primal_objs[k] = solver.get_primal_cost() * comm.demand;
+		root_node.paths.push_back(solver.get_path());
 	}
 
 	// Dual
-	dual_cplex.solve();
-	root_node.dual_obj = dual_cplex.getObjValue();
+	solver.solve_dual();
+	root_node.dual_obj = solver.get_dual_cost();
 	root_node.update_bound();
 
-	root_node.lambda = NumMatrix(env, K);
-	LOOP(k, K) {
-		root_node.lambda[k] = NumArray(env, V);
-		dual_cplex.getValues(lambda[k], root_node.lambda[k]);
-	}
-
-	root_node.t = NumArray(env, A1);
-	dual_cplex.getValues(t, root_node.t);
+	root_node.lambda = solver.get_lambda();
+	root_node.t = solver.get_t();
 
 	// Update violated constraints and feasibility test
 	root_node.update_violated();
@@ -143,7 +101,7 @@ void csenum::step()
 	NumMatrix best_lambda(env, K);
 	NumArray best_t(env, A1);
 
-	set_dual_state(dual_coors);
+	solver.set_dual_state(dual_coors);
 	LOOP(k, K) best_lambda[k] = NumArray(env, V);
 
 	LOOP(k, K) {
@@ -153,19 +111,21 @@ void csenum::step()
 			continue;
 
 		// Find the best improvement
-		set_primal_state(primal_coors[k]);
+		solver.set_primal_state(primal_coors[k]);
 		for (int a : vk) {
 			//printf("  %2d.%2d ", k, a);
 			// Primal improvement
-			push_primal_state(a);
-			auto path = primal_lgraph.shortest_path(comm.origin, comm.destination);
-			bool primal_feasible = !path.empty();
+			solver.push_primal_state(a);
+			bool primal_feasible = solver.solve_primal(k);
+
+			vector<int> path;
 			double primal_impr = -1;
+
 			if (primal_feasible) {
-				double cost = primal_lgraph.get_path_cost(path) * comm.demand;
+				double cost = solver.get_primal_cost() * comm.demand;
 				primal_impr = cost - node.primal_objs[k];
 			}
-			pop_primal_state();
+			solver.pop_primal_state();
 			//printf("- P = %f ", primal_impr);
 
 			// Early break
@@ -175,9 +135,9 @@ void csenum::step()
 			}
 
 			// Dual improvement
-			push_dual_state(csenum_coor{ .k = k, .a = a });
-			bool dual_feasible = dual_cplex.solve();
-			double dual_impr = dual_feasible ? node.dual_obj - dual_cplex.getObjValue() : -1;
+			solver.push_dual_state(csenum_coor{ .k = k, .a = a });
+			bool dual_feasible = solver.solve_dual();
+			double dual_impr = dual_feasible ? node.dual_obj - solver.get_dual_cost() : -1;
 			//printf("- D = %f ", dual_impr);
 			//cout << endl;
 
@@ -189,13 +149,13 @@ void csenum::step()
 				best_dual_impr = dual_impr;
 				best_coor.k = k;
 				best_coor.a = a;
-				best_path = path;
+				best_path = solver.get_path();
 				if (dual_impr >= 0) {
-					LOOP(k, K) dual_cplex.getValues(lambda[k], best_lambda[k]);
-					dual_cplex.getValues(t, best_t);
+					solver.get_lambda(best_lambda);
+					solver.get_t(best_t);
 				}
 			}
-			pop_dual_state();
+			solver.pop_dual_state();
 		}
 	}
 
@@ -259,76 +219,6 @@ void csenum::step()
 	step_count++;
 }
 
-void csenum::clear_primal_state()
-{
-	// Enable all edges in primal graph
-	LOOP(i, V) {
-		for (auto& pair : primal_lgraph.E[i]) {
-			pair.second.enabled = true;
-		}
-	}
-	primal_state_stack.clear();
-}
-
-void csenum::clear_dual_state()
-{
-	// Clear all lower bounds in dual model
-	LOOP(k, K) LOOP(a, A) {
-		dual_feas[k][a].setLB(-IloInfinity);
-	}
-	dual_state_stack.clear();
-}
-
-void csenum::set_primal_state(std::vector<int> as)
-{
-	clear_primal_state();
-
-	// Disable all edges listed in coork
-	for (int a : as)
-		push_primal_state(a);
-}
-
-void csenum::set_dual_state(std::vector<csenum_coor> coors)
-{
-	clear_dual_state();
-
-	// Restrict dual_feas[k][a] to equality
-	for (auto& coor : coors)
-		push_dual_state(coor);
-}
-
-void csenum::push_primal_state(int a)
-{
-	SRC_DST_FROM_A(prob, a);
-	primal_lgraph.E[src][dst].enabled = false;
-	primal_state_stack.push_back(a);
-}
-
-void csenum::push_dual_state(const csenum_coor& coor)
-{
-	dual_feas[coor.k][coor.a].setLB(dual_feas[coor.k][coor.a].getUB());
-	dual_state_stack.push_back(coor);
-}
-
-void csenum::pop_primal_state()
-{
-	int a = primal_state_stack.back();
-
-	SRC_DST_FROM_A(prob, a);
-	primal_lgraph.E[src][dst].enabled = true;
-
-	primal_state_stack.pop_back();
-}
-
-void csenum::pop_dual_state()
-{
-	csenum_coor& coor = dual_state_stack.back();
-
-	dual_feas[coor.k][coor.a].setLB(-IloInfinity);
-
-	dual_state_stack.pop_back();
-}
-
 double csenum::get_best_obj()
 {
 	return best_node.bound;
@@ -350,8 +240,8 @@ void csenum::print_node(const csenum_node& node, bool feasible)
 	char last_branch_str[25];
 	if (!node.lineage.empty()) {
 		const auto& last_branch = node.lineage.back();
-		SRC_DST_FROM_A(prob, last_branch.a);
-		bool is_tolled = prob.is_tolled_map[edge];
+		SRC_DST_FROM_A(solver.prob, last_branch.a);
+		bool is_tolled = solver.prob.is_tolled_map[edge];
 		sprintf(last_branch_str, "%s[%d,%d->%d] %s", is_tolled ? "x" : "y", last_branch.k, src, dst, last_branch.dir ? "D" : "P");
 	}
 	else
@@ -378,7 +268,7 @@ void csenum::print_node(const csenum_node& node, bool feasible)
 	cout << endl;
 }
 
-bool csenum::solve_impr()
+bool csenum::solve_impl()
 {
 	// Print header
 	printf("  Node  Step  Left Index Parent Depth Vltd      Bound    BestObj   Gap      LastBranch    Time");

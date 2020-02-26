@@ -15,7 +15,7 @@ struct model_cplex : public model_base, public cplex_def {
 		return cplex;
 	}
 
-	virtual bool solve_impr() override {
+	virtual bool solve_impl() override {
 		return cplex.solve();
 	}
 
@@ -42,7 +42,7 @@ struct model_with_callbacks : public model_cplex {
 
 	model_with_callbacks(IloEnv& env) : model_cplex(env) {}
 
-	virtual bool solve_impr() override {
+	virtual bool solve_impl() override {
 		callbacks = attach_callbacks();
 		return model_cplex::solve();
 	}
@@ -75,7 +75,7 @@ struct model_with_generic_callbacks : public model_cplex {
 
 	model_with_generic_callbacks(IloEnv& env) : model_cplex(env) {}
 
-	virtual bool solve_impr() override {
+	virtual bool solve_impl() override {
 		callbacks = attach_callbacks();
 		for (auto& cb : callbacks)
 			cplex.use(cb.first, cb.second);
@@ -97,7 +97,7 @@ struct model_with_goal : public model_cplex {
 
 	model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_cplex(env), goal(goal) {}
 
-	virtual bool solve_impr() override {
+	virtual bool solve_impl() override {
 		return cplex.solve(goal);
 	}
 };

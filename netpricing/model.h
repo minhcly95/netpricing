@@ -18,10 +18,10 @@ struct model_base {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 	double time;
 
-	virtual bool solve_impr() = 0;
+	virtual bool solve_impl() = 0;
 	bool solve() {
 		start_time = std::chrono::high_resolution_clock::now();
-		bool res = solve_impr();
+		bool res = solve_impl();
 		auto end = std::chrono::high_resolution_clock::now();
 		time = std::chrono::duration<double>(end - start_time).count();
 		return res;

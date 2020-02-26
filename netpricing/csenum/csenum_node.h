@@ -1,24 +1,9 @@
 #pragma once
 
 #include "../model.h"
+#include "csenum_def.h"
 
 struct csenum;
-
-enum csenum_branch_dir : bool {
-	PRIMAL,
-	DUAL
-};
-
-struct csenum_coor {
-	int k;
-	int a;
-};
-
-struct csenum_branch {
-	int k;
-	int a;
-	csenum_branch_dir dir;
-};
 
 struct csenum_node {
 	static constexpr double TOLERANCE = 1e-4;
