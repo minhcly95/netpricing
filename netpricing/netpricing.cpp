@@ -43,7 +43,7 @@ void print_src_dst(P& prob, T& model) {
 
 template <class model_type>
 string run_model(IloEnv& env, typename model_type::problem_type& prob, string model_name, config& conf) {
-	try {
+	//try {
 		cout << "--------------------------------------" << endl;
 		cout << model_name << endl;
 
@@ -72,10 +72,10 @@ string run_model(IloEnv& env, typename model_type::problem_type& prob, string mo
 		regex report_regex("^|(\\n)(?!$)");
 		report = std::regex_replace(report, report_regex, "$1  ");
 		return report;
-	}
-	catch (const IloException & e) {
-		cerr << "Exception caught: " << e << endl;
-	}
+	//}
+	//catch (const IloException & e) {
+	//	cerr << "Exception caught: " << e << endl;
+	//}
 }
 
 void run_routine(int index);

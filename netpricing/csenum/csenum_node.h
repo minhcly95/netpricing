@@ -1,37 +1,21 @@
 #pragma once
 
-#include "../model.h"
 #include "csenum_def.h"
+#include "../branchbound/bb_node.h"
 
-struct csenum;
+#include <vector>
 
-struct csenum_node {
-	static constexpr double TOLERANCE = 1e-4;
-
-	csenum* cse;
-	int index;
-	int parent;
-
-	double bound;
+struct csenum_node : public bb_node<csenum_coor> {
 	std::vector<double> primal_objs;
 	double dual_obj;
-
-	std::vector<csenum_branch> lineage;
+	double bound;
 
 	std::vector<std::vector<int>> paths;
-	cplex_def::NumMatrix lambda;
-	cplex_def::NumArray t;
+	std::vector<std::vector<bool>> slack_map;
+	std::vector<csenum_coor> candidates;
 
-	// Updated later
-	std::vector<std::vector<int>> violated;
-
-	void update_bound();
-	int get_depth() const;			// The length of lineage
-
-	bool is_feasible() const;	
-	void update_violated();			// Get all coors (k,a) where comp-slack constraint is violated
-	void update_violated(int k);
-	int get_num_violated() const;
-
-	bool operator<(const csenum_node& other) const;
+	// Inherited via bb_node
+	virtual csenum_node* clone() const override;
+	virtual double get_bound() const override;
+	virtual const std::vector<csenum_coor>& get_candidates() const override;
 };

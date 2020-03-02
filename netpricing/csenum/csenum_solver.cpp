@@ -2,10 +2,16 @@
 #include "../macros.h"
 
 csenum_solver::csenum_solver(const IloEnv& _env, const problem& _prob) :
-	model_single(_prob), primal_lgraph(prob.graph),
+	model_single(_prob), primal_lgraphs(), primal_results(K),
 	env(_env), dual_model(env), dual_cplex(dual_model)
 {
+	build_primal_model();
 	build_dual_model();
+}
+
+void csenum_solver::build_primal_model()
+{
+	LOOP(k, K) primal_lgraphs.emplace_back(prob.graph);
 }
 
 void csenum_solver::build_dual_model()
@@ -45,18 +51,37 @@ void csenum_solver::build_dual_model()
 bool csenum_solver::solve_primal(int k)
 {
 	commodity& comm = prob.commodities[k];
-	primal_result = primal_lgraph.shortest_path(comm.origin, comm.destination);
-	return !primal_result.empty();
+	primal_results[k] = primal_lgraphs[k].shortest_path(comm.origin, comm.destination);
+	return !primal_results[k].empty();
 }
 
-double csenum_solver::get_primal_cost()
+double csenum_solver::get_primal_cost(int k)
 {
-	return primal_lgraph.get_path_cost(primal_result);
+	return primal_lgraphs[k].get_path_cost(primal_results[k]);
 }
 
-std::vector<int> csenum_solver::get_path()
+std::vector<int> csenum_solver::get_path(int k)
 {
-	return primal_result;
+	return primal_results[k];
+}
+
+std::vector<bool> csenum_solver::solve_primals()
+{
+	std::vector<bool> results(K);
+	LOOP(k, K) results[k] = solve_primal(k);
+	return results;
+}
+
+std::vector<double> csenum_solver::get_primal_costs()
+{
+	std::vector<double> costs(K);
+	LOOP(k, K) costs[k] = get_primal_cost(k);
+	return costs;
+}
+
+std::vector<std::vector<int>> csenum_solver::get_paths()
+{
+	return primal_results;
 }
 
 bool csenum_solver::solve_dual()
@@ -101,8 +126,8 @@ csenum_solver::NumArray csenum_solver::get_t(NumArray& tvals)
 void csenum_solver::clear_primal_state()
 {
 	// Enable all edges in primal graph
-	LOOP(i, V) {
-		for (auto& pair : primal_lgraph.E[i]) {
+	LOOP(k, K) LOOP(i, V) {
+		for (auto& pair : primal_lgraphs[k].E[i]) {
 			pair.second.enabled = true;
 		}
 	}
@@ -118,16 +143,16 @@ void csenum_solver::clear_dual_state()
 	dual_state_stack.clear();
 }
 
-void csenum_solver::set_primal_state(std::vector<int> as)
+void csenum_solver::set_primal_state(const std::vector<csenum_coor>& coors)
 {
 	clear_primal_state();
 
-	// Disable all edges listed in coork
-	for (int a : as)
-		push_primal_state(a);
+	// Disable all edges[k][a] listed in coors
+	for (auto& coor : coors)
+		push_primal_state(coor);
 }
 
-void csenum_solver::set_dual_state(std::vector<csenum_coor> coors)
+void csenum_solver::set_dual_state(const std::vector<csenum_coor>& coors)
 {
 	clear_dual_state();
 
@@ -136,11 +161,11 @@ void csenum_solver::set_dual_state(std::vector<csenum_coor> coors)
 		push_dual_state(coor);
 }
 
-void csenum_solver::push_primal_state(int a)
+void csenum_solver::push_primal_state(const csenum_coor& coor)
 {
-	SRC_DST_FROM_A(prob, a);
-	primal_lgraph.E[src][dst].enabled = false;
-	primal_state_stack.push_back(a);
+	SRC_DST_FROM_A(prob, coor.a);
+	primal_lgraphs[coor.k].E[src][dst].enabled = false;
+	primal_state_stack.push_back(coor);
 }
 
 void csenum_solver::push_dual_state(const csenum_coor& coor)
@@ -151,10 +176,10 @@ void csenum_solver::push_dual_state(const csenum_coor& coor)
 
 void csenum_solver::pop_primal_state()
 {
-	int a = primal_state_stack.back();
+	csenum_coor& coor = primal_state_stack.back();
 
-	SRC_DST_FROM_A(prob, a);
-	primal_lgraph.E[src][dst].enabled = true;
+	SRC_DST_FROM_A(prob, coor.a);
+	primal_lgraphs[coor.k].E[src][dst].enabled = true;
 
 	primal_state_stack.pop_back();
 }

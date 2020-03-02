@@ -32,6 +32,7 @@ add_executable(netpricing
 	"models/value_func_model.cpp"
 	
 	"csenum/csenum.cpp"
+	"csenum/csenum_context.cpp"
 	"csenum/csenum_node.cpp"
 	"csenum/csenum_solver.cpp"
 	

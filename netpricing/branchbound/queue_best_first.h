@@ -4,8 +4,8 @@
 
 #include <set>
 
-template <typename _node_type, bb_opt_direction _opt_dir>
-struct queue_best_first : public bb_queue<_node_type, _opt_dir>
+template <typename node_type, bb_opt_direction opt_dir>
+struct queue_best_first : public bb_queue<node_type, opt_dir>
 {
 	std::multiset<node_type*, bb_better<opt_dir, node_type>> mset;
 
@@ -16,4 +16,5 @@ struct queue_best_first : public bb_queue<_node_type, _opt_dir>
 	virtual void pop() override;
 	virtual void append(const std::vector<node_type*>& nodes) override;
 	virtual void prune(double new_obj) override;
+	virtual double get_best_bound() const override;
 };
