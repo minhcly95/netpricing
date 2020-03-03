@@ -17,6 +17,7 @@
 #include "models/standard_goal_model.h"
 #include "models/standard_cscut_model.h"
 #include "models/standard_vfcut_model.h"
+#include "models/light_vfcut_model.h"
 #include "models/benders_model_original.h"
 #include "models/benders_model_reduced.h"
 #include "models/benders_model_reduced2.h"

@@ -21,6 +21,7 @@ add_executable(netpricing
 	"models/standard_goal_model.cpp"
 	"models/standard_cscut_model.cpp"
 	"models/standard_vfcut_model.cpp"
+	"models/light_vfcut_model.cpp"
 	"models/standard_model_multi.cpp"
 	"models/benders_model_original.cpp"
 	"models/benders_model_reduced.cpp"

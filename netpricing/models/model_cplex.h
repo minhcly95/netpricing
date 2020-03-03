@@ -44,7 +44,7 @@ struct model_with_callbacks : public model_cplex {
 
 	virtual bool solve_impl() override {
 		callbacks = attach_callbacks();
-		return model_cplex::solve();
+		return model_cplex::solve_impl();
 	}
 
 	virtual void end() override {
@@ -80,7 +80,7 @@ struct model_with_generic_callbacks : public model_cplex {
 		for (auto& cb : callbacks)
 			cplex.use(cb.first, cb.second);
 
-		return model_cplex::solve();
+		return model_cplex::solve_impl();
 	}
 
 	virtual void end() override {

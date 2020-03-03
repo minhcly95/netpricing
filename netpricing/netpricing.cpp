@@ -91,6 +91,7 @@ int main(int argc, char* argv[])
 		("routine,r", po::value<int>(), "run special routines")
 		("standard,s", "run standard model")
 		("vfcut", "run standard model with value function cuts")
+		("lvfcut", "run standard model with value function cuts (light version)")
 		("goal", "run standard model with CPLEX goals")
 		("cscut", "run standard model with complementary slackness cuts")
 		("benders", po::value<int>(), "run Benders model (arg is 0, 1, or 2)")
@@ -245,6 +246,10 @@ int main(int argc, char* argv[])
 	if (vm.count("vfcut")) {
 		report << "STANDARD VFCUT:" << endl <<
 			 run_model<standard_vfcut_model>(env, *prob, "STANDARD VFCUT MODEL", conf);
+	}
+	if (vm.count("lvfcut")) {
+		report << "LIGHT VFCUT:" << endl <<
+			run_model<light_vfcut_model>(env, *prob, "LIGHT VFCUT MODEL", conf);
 	}
 	if (vm.count("benders")) {
 		report << "BENDERS:" << endl;
