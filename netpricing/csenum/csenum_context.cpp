@@ -43,7 +43,9 @@ bool csenum_context::update_bound(node_type* node, node_type* parent_node, const
 
 	if (branch_dir == PRIMAL) {
 		solver.push_primal_state(coor);
-		is_feasible = solver.solve_primal(coor.k);
+
+		int k = coor.k;
+		is_feasible = solver.solve_primal(k);
 		if (!is_feasible) {
 			solver.pop_primal_state();
 			return false;
@@ -52,8 +54,8 @@ bool csenum_context::update_bound(node_type* node, node_type* parent_node, const
 		node->primal_objs = parent_node->primal_objs;
 		node->paths = parent_node->paths;
 
-		node->primal_objs[coor.k] = solver.get_primal_cost(coor.k);
-		node->paths[coor.k] = solver.get_path(coor.k);
+		node->paths[k] = solver.get_path(k);
+		node->primal_objs[k] = solver.get_primal_cost(node->paths[k]);
 
 		node->dual_obj = parent_node->dual_obj;
 		node->slack_map = parent_node->slack_map;
@@ -94,14 +96,16 @@ double csenum_context::evaluate_branch(node_type* node, const candidate_type& co
 
 	if (branch_dir == PRIMAL) {
 		solver.push_primal_state(coor);
+
+		int k = coor.k;
 		is_feasible = solver.solve_primal(coor.k);
 		if (!is_feasible) {
 			solver.pop_primal_state();
 			return -1;
 		}
 
-		double new_obj = solver.get_primal_cost(coor.k);
-		result = (new_obj - node->primal_objs[coor.k]) * prob.commodities[coor.k].demand;
+		double new_obj = solver.get_primal_cost(solver.get_path(k));
+		result = (new_obj - node->primal_objs[k]) * prob.commodities[k].demand;
 
 		solver.pop_primal_state();
 	}
