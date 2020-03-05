@@ -30,6 +30,7 @@
 #include "models/standard_model_multi.h"
 
 #include "csenum/csenum.h"
+#include "csenum/csenum_excl.h"
 
 #include "routines/routines.h"
 

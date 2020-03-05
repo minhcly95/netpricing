@@ -33,11 +33,13 @@ add_executable(netpricing
 	"models/value_func_model.cpp"
 	
 	"csenum/csenum.cpp"
+	"csenum/csenum_excl.cpp"
 	"csenum/csenum_context.cpp"
 	"csenum/csenum_node.cpp"
 	"csenum/csenum_solver_base.cpp"
 	"csenum/csenum_solver_dual_only.cpp"
 	"csenum/csenum_solver.cpp"
+	"csenum/csenum_solver_excl.cpp"
 	
 	"utilities/follower_solver_base.cpp"
 	"utilities/follower_solver.cpp"

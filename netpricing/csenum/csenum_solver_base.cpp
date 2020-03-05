@@ -6,11 +6,6 @@ csenum_solver_base::csenum_solver_base(const IloEnv& env, const problem& prob) :
 {
 }
 
-double csenum_solver_base::get_primal_cost(int k)
-{
-	return get_primal_cost(get_path(k));
-}
-
 std::vector<bool> csenum_solver_base::solve_primals()
 {
 	std::vector<bool> results(K);
@@ -18,23 +13,18 @@ std::vector<bool> csenum_solver_base::solve_primals()
 	return results;
 }
 
-std::vector<std::vector<int>> csenum_solver_base::get_paths()
+std::vector<std::vector<int>> csenum_solver_base::get_all_primal_arcs()
 {
 	std::vector<std::vector<int>> paths;
-	LOOP(k, K) paths.push_back(get_path(k));
+	LOOP(k, K) paths.push_back(get_primal_arcs(k));
 	return paths;
-}
-
-std::vector<double> csenum_solver_base::get_primal_costs(const std::vector<std::vector<int>>& paths)
-{
-	std::vector<double> costs(K);
-	LOOP(k, K) costs[k] = get_primal_cost(paths[k]);
-	return costs;
 }
 
 std::vector<double> csenum_solver_base::get_primal_costs()
 {
-	return get_primal_costs(get_paths());
+	std::vector<double> costs(K);
+	LOOP(k, K) costs[k] = get_primal_cost(k);
+	return costs;
 }
 
 cplex_def::NumMatrix csenum_solver_base::get_lambda(NumMatrix& lvals)

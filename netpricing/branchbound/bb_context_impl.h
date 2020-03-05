@@ -73,6 +73,10 @@ inline bool bb_context<_queue_type>::solve()
 
 		// Statistics
 		step_count++;
+
+		// Time limit
+		if (time_limit > 0 && get_current_time() >= time_limit)
+			break;
 	}
 
 	return best_node != nullptr;

@@ -14,13 +14,11 @@ struct csenum_solver_base : public model_single, public cplex_def
 	csenum_solver_base(const IloEnv& env, const problem& prob);
 
 	virtual bool solve_primal(int k) = 0;
-	virtual std::vector<int> get_path(int k) = 0;
-	virtual double get_primal_cost(const std::vector<int>& path) = 0;
-	double get_primal_cost(int k);
+	virtual std::vector<int> get_primal_arcs(int k) = 0;
+	virtual double get_primal_cost(int k) = 0;
 
 	std::vector<bool> solve_primals();
-	std::vector<std::vector<int>> get_paths();
-	std::vector<double> get_primal_costs(const std::vector<std::vector<int>>& paths);
+	std::vector<std::vector<int>> get_all_primal_arcs();
 	std::vector<double> get_primal_costs();
 
 	virtual bool solve_dual() = 0;

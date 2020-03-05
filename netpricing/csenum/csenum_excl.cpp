@@ -1,27 +1,27 @@
-#include "csenum.h"
+#include "csenum_excl.h"
 #include "../macros.h"
-#include "csenum_solver.h"
+#include "csenum_solver_excl.h"
 
 #include <chrono>
 
 using namespace std;
 
-csenum::csenum(IloEnv& _env, const problem& _prob) :
-	context(new csenum_solver(_env, _prob))
+csenum_excl::csenum_excl(IloEnv& _env, const problem& _prob) :
+	context(new csenum_solver_excl(_env, _prob))
 {
 }
 
-bool csenum::solve_impl()
+bool csenum_excl::solve_impl()
 {
 	return context.solve();
 }
 
-void csenum::config(const model_config& config)
+void csenum_excl::config(const model_config& config)
 {
 	context.time_limit = config.time_limit;
 }
 
-solution csenum::get_solution()
+solution csenum_excl::get_solution()
 {
 	solution sol;
 	if (context.best_node != nullptr) {
@@ -30,7 +30,7 @@ solution csenum::get_solution()
 	return sol;
 }
 
-string csenum::get_report()
+string csenum_excl::get_report()
 {
 	ostringstream ss;
 	ss << "OBJ: " << context.get_best_obj() << endl <<

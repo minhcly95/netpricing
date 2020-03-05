@@ -72,7 +72,8 @@ struct bb_context {
 		return std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_time).count();
 	}
 	double get_best_bound() const {
-		return queue.get_best_bound();
+		double best_bound = queue.get_best_bound();
+		return is_better_obj<opt_dir>(best_bound, best_obj) ? best_bound : best_obj;
 	}
 	double get_best_obj() const {
 		return best_obj;

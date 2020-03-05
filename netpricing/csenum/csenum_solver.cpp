@@ -19,14 +19,21 @@ bool csenum_solver::solve_primal(int k)
 	return !primal_results[k].empty();
 }
 
-std::vector<int> csenum_solver::get_path(int k)
+std::vector<int> csenum_solver::get_primal_arcs(int k)
 {
-	return primal_results[k];
+	// Convert path to list of arcs
+	std::vector<int> arcs;
+	std::vector<int>& path = primal_results[k];
+	for (int i = 0; i < path.size() - 1; i++) {
+		auto edge = EDGE_FROM_SRC_DST(prob, path[i], path[i + 1]);
+		arcs.push_back(EDGE_TO_A(prob, edge));
+	}
+	return arcs;
 }
 
-double csenum_solver::get_primal_cost(const std::vector<int>& path)
+double csenum_solver::get_primal_cost(int k)
 {
-	return primal_lgraphs[0].get_path_cost(path);
+	return primal_lgraphs[k].get_path_cost(primal_results[k]);
 }
 
 void csenum_solver::clear_primal_state_impl()

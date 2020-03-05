@@ -10,7 +10,7 @@ struct csenum_node : public bb_node<csenum_coor> {
 	double dual_obj;
 	double bound;
 
-	std::vector<std::vector<int>> paths;
+	std::vector<std::vector<int>> arcs;
 	std::vector<std::vector<bool>> slack_map;
 	std::vector<csenum_coor> candidates;
 

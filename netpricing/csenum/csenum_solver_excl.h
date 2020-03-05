@@ -3,12 +3,17 @@
 #include "csenum_solver_dual_only.h"
 #include "../graph/light_graph.h"
 
-struct csenum_solver : public csenum_solver_dual_only
+struct csenum_solver_excl : public csenum_solver_dual_only
 {
-	std::vector<light_graph> primal_lgraphs;
-	std::vector<light_graph::path> primal_results;
+	std::vector<IloModel> primal_models;
+	std::vector<IloCplex> primal_cplex;
 
-	csenum_solver(const IloEnv& env, const problem& prob);
+	// Dual model
+	VarMatrix z;
+	std::vector<IloObjective> primal_objs;
+	RangeMatrix flow_constr;
+
+	csenum_solver_excl(const IloEnv& env, const problem& prob);
 
 	// Models
 	void build_primal_model();
@@ -19,6 +24,11 @@ struct csenum_solver : public csenum_solver_dual_only
 
 	// State management
 	virtual void clear_primal_state_impl() override;
+	virtual void clear_dual_state_impl() override;
+
 	virtual void push_primal_state_impl(const csenum_coor& coor) override;
+	virtual void push_dual_state_impl(const csenum_coor& coor) override;
+
 	virtual void pop_primal_state_impl(const csenum_coor& coor) override;
+	virtual void pop_dual_state_impl(const csenum_coor& coor) override;
 };

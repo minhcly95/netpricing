@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
 		("xytbenders", "run xyT Benders model")
 		("slackbr", "run slack-branch model")
 		("csenum", "run complementary slackness enumeration")
+		("csenum-excl", "run complementary slackness enumeration (exclusive branch version)")
 		("multi", "run multi-graph version")
 		("input,i", po::value<string>(), "input problem from file")
 		("output,o", po::value<string>()->default_value("report.json"), "output report file")
@@ -280,6 +281,9 @@ int main(int argc, char* argv[])
 	}
 	if (vm.count("csenum")) {
 		report << "CS ENUM:" << endl << run_model<csenum>(env, *prob, "COMP-SLACK ENUM", conf);
+	}
+	if (vm.count("csenum-excl")) {
+		report << "CS ENUM EXCL:" << endl << run_model<csenum_excl>(env, *prob, "COMP-SLACK ENUM EXCL", conf);
 	}
 
 	// Print report
