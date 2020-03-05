@@ -40,12 +40,18 @@ struct bb_context {
 
 	// Statistics
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
-	double time_limit;
 	double print_interval;
 	double last_print_time;
 	int node_count;
 	int step_count;
 	int branch_cat_count[3];
+	int strong_eval;
+	double strong_eval_time;
+
+	// Parameters
+	double time_limit;
+	int reliable_threshold;
+	int reliable_lookahead;
 
 	// Constructor
 	bb_context();
@@ -57,7 +63,9 @@ struct bb_context {
 
 	// Helpers
 	void add_new_solution(node_type* node);
-	double get_impr_avg(const candidate_type& candidate, bool branch_dir);
+	double calculate_score(double first_impr, double second_impr);
+	double get_candidate_pseudo_score(const candidate_type& candidate);
+	bool is_pseudo_score_reliable(const candidate_type& candidate, int threshold);
 
 	// Virtual
 	virtual bool update_root_bound(node_type* node) = 0;
@@ -68,26 +76,11 @@ struct bb_context {
 	virtual void enter_node(node_type* node) {}
 
 	// Query
-	double get_current_time() const {
-		return std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_time).count();
-	}
-	double get_best_bound() const {
-		double best_bound = queue.get_best_bound();
-		return is_better_obj<opt_dir>(best_bound, best_obj) ? best_bound : best_obj;
-	}
-	double get_best_obj() const {
-		return best_obj;
-	}
-	double get_gap_ratio() const {
-		double bound = get_best_bound();
-		double obj = get_best_obj();
-		return std::abs(bound - obj) / std::min(bound, obj);
-	}
-	int get_branch_category_count(int i) const {
-		if (i >= 0 && i <= 2)
-			return branch_cat_count[i];
-		throw std::invalid_argument("category must be between 0 and 2");
-	}
+	double get_current_time() const;
+	double get_best_bound() const;
+	double get_best_obj() const;
+	double get_gap_ratio() const;
+	int get_branch_category_count(int i) const;
 
 	// Print
 	void print_header() const;
