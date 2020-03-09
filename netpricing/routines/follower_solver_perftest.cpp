@@ -2,24 +2,11 @@
 #include "../utilities/follower_cplex_solver.h"
 #include "../utilities/follower_light_solver.h"
 #include "../problem_generator.h"
+#include "data_generator.h"
 
 #include <chrono>
 
 using namespace std;
-
-template <class solver_type, class random_type>
-vector<vector<cost_type>> generate_tolls_data(const solver_type& solver, int samples, random_type& random_engine) {
-	vector<vector<cost_type>> tolls_data(samples, vector<cost_type>(solver.A1));
-
-	LOOP(a, solver.A1) {
-		uniform_real_distribution<> dist(0, solver.prob.big_n[a]);
-		LOOP(i, samples) {
-			tolls_data[i][a] = dist(random_engine);
-		}
-	}
-
-	return tolls_data;
-}
 
 void follower_solver_perftest() {
 	cout << "Follower solver performance test..." << endl;
@@ -53,8 +40,8 @@ void follower_solver_perftest() {
 void follower_cplex_solver_perftest() {
 	cout << "Follower CPLEX solver performance test..." << endl;
 
-	const int SAMPLES = 100;
-	const int REPEAT = 10;
+	const int SAMPLES = 1000;
+	const int REPEAT = 1;
 	const int TOTAL = SAMPLES * REPEAT;
 
 	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();

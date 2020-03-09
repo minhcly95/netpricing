@@ -314,6 +314,9 @@ void run_routine(int index)
 	case 1: follower_cplex_solver_perftest(); break;
 	case 2: follower_light_solver_perftest(); break;
 	case 3: follower_solver_acctest(); break;
+	case 4: inverse_solver_acctest(); break;
+	case 5: inverse_solver_perftest(); break;
+	case 6: tolls_heuristic_perftest(); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;

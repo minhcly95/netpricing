@@ -31,6 +31,8 @@ add_executable(netpricing
 	"models/benders_xyt_model.cpp"
 	"models/slackbranch_model.cpp"
 	"models/value_func_model.cpp"
+
+	"heuristics/tolls_heuristic.cpp"
 	
 	"csenum/csenum.cpp"
 	"csenum/csenum_excl.cpp"
@@ -45,8 +47,11 @@ add_executable(netpricing
 	"utilities/follower_solver.cpp"
 	"utilities/follower_cplex_solver.cpp"
 	"utilities/follower_light_solver.cpp"
+	"utilities/inverse_solver.cpp"
 
 	"routines/follower_solver_perftest.cpp"
+	"routines/inverse_solver_test.cpp"
+	"routines/tolls_heuristic_test.cpp"
 
 	"graph/light_graph.cpp")
 
