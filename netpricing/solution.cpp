@@ -15,6 +15,27 @@ solution::solution(const solution& other) :
 solution::solution(solution&& other) :
 	paths(std::move(other.paths)), tolls(std::move(other.tolls)) { }
 
+cost_type solution::get_obj_value(const problem& prob) const
+{
+	cost_type profit = 0;
+
+	LOOP(k, paths.size()) {
+		cost_type profit_k = 0;
+		const path& p = paths[k];
+
+		for (int i = 0; i < p.size() - 1; ++i) {
+			auto edge = EDGE_FROM_SRC_DST(prob, p[i], p[i + 1]);
+			if (prob.is_tolled_map[edge]) {
+				profit_k += tolls[EDGE_TO_A1(prob, edge)];
+			}
+		}
+
+		profit += profit_k * prob.commodities[k].demand;
+	}
+
+	return profit;
+}
+
 json solution::get_json(const problem& prob) const
 {
 	json json_obj;

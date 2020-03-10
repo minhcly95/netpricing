@@ -52,6 +52,7 @@ struct bb_context {
 	double time_limit;
 	int reliable_threshold;
 	int reliable_lookahead;
+	int heuristic_freq;
 
 	// Constructor
 	bb_context();
@@ -74,6 +75,7 @@ struct bb_context {
 
 	// Optional callbacks
 	virtual void enter_node(node_type* node) {}
+	virtual void run_heuristic(node_type* node) {}
 
 	// Query
 	double get_current_time() const;

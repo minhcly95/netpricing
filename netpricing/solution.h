@@ -18,6 +18,8 @@ struct solution {
 	solution(const solution& other);
 	solution(solution&& other);
 
+	cost_type get_obj_value(const problem& prob) const;
+
 	nlohmann::json get_json(const problem& prob) const;
 	nlohmann::json get_json(const problem_multi& prob) const;
 };

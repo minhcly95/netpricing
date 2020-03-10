@@ -4,6 +4,7 @@
 #include "csenum_node.h"
 #include "../branchbound/queue_hybrid.h"
 #include "../branchbound/bb_context.h"
+#include "../heuristics/tolls_heuristic.h"
 
 struct csenum_queue : public queue_hybrid<csenum_node, Maximize> {};
 
@@ -14,6 +15,8 @@ struct csenum_context : public bb_context<csenum_queue> {
 	problem& prob;
 	int K, V, A, A1, A2;
 
+	tolls_heuristic heur;
+
 	csenum_context(csenum_solver_base* _solver);
 	virtual ~csenum_context();
 
@@ -23,6 +26,7 @@ struct csenum_context : public bb_context<csenum_queue> {
 	virtual double evaluate_branch(node_type* node, const candidate_type& candidate, bool branch_dir) override;
 
 	virtual void enter_node(node_type* node) override;
+	virtual void run_heuristic(node_type* node) override;
 
 	// Helper
 	void update_slack_map(node_type* node);

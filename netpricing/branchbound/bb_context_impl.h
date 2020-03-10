@@ -26,6 +26,7 @@ inline bb_context<_queue_type>::bb_context() : queue(), branch_cat_count{0,0,0}
 	time_limit = 0;
 	reliable_threshold = 8;
 	reliable_lookahead = 4;
+	heuristic_freq = 100;
 }
 
 template<typename _queue_type>
@@ -73,6 +74,11 @@ inline bool bb_context<_queue_type>::solve()
 
 		// Process the node
 		step(node);
+
+		// Heuristic
+		if (heuristic_freq > 0 && step_count % heuristic_freq == 0) {
+			run_heuristic(node);
+		}
 
 		// Delete the old node
 		delete node;

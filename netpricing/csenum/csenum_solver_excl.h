@@ -12,6 +12,8 @@ struct csenum_solver_excl : public csenum_solver_dual_only
 	VarMatrix z;
 	std::vector<IloObjective> primal_objs;
 	RangeMatrix flow_constr;
+	RangeMatrix unique_out;
+	RangeMatrix unique_in;
 
 	csenum_solver_excl(const IloEnv& env, const problem& prob);
 

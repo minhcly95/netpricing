@@ -12,7 +12,8 @@ template struct bb_context<csenum_queue>;
 
 csenum_context::csenum_context(csenum_solver_base* _solver) :
 	solver(_solver), env(_solver->env), prob(_solver->prob),
-	K(solver->K), V(solver->V), A(solver->A), A1(solver->A1), A2(solver->A2)
+	K(solver->K), V(solver->V), A(solver->A), A1(solver->A1), A2(solver->A2),
+	heur(env, prob)
 {
 }
 
@@ -35,6 +36,11 @@ bool csenum_context::update_root_bound(node_type* node)
 	LOOP(k, K) node->bound -= prob.commodities[k].demand * node->primal_objs[k];
 
 	node->arcs = solver->get_all_primal_arcs();
+
+	auto tvals = solver->get_t();
+	LOOP(a, A1) node->tolls.push_back(tvals[a]);
+	tvals.end();
+
 	update_slack_map(node);
 
 	update_candidate_list(node);
@@ -63,6 +69,7 @@ bool csenum_context::update_bound(node_type* node, node_type* parent_node, const
 		node->arcs[k] = solver->get_primal_arcs(k);
 
 		node->dual_obj = parent_node->dual_obj;
+		node->tolls = parent_node->tolls;
 		node->slack_map = parent_node->slack_map;
 
 		solver->pop_primal_state();
@@ -79,6 +86,11 @@ bool csenum_context::update_bound(node_type* node, node_type* parent_node, const
 		node->arcs = parent_node->arcs;
 
 		node->dual_obj = solver->get_dual_cost();
+
+		auto tvals = solver->get_t();
+		LOOP(a, A1) node->tolls.push_back(tvals[a]);
+		tvals.end();
+
 		update_slack_map(node);
 
 		solver->pop_dual_state();
@@ -149,12 +161,37 @@ void csenum_context::enter_node(node_type* node)
 	}
 }
 
+void csenum_context::run_heuristic(node_type* node)
+{
+	solution sol = heur.solve(node->tolls);
+	cost_type obj = sol.get_obj_value(prob);
+
+	if (obj > get_best_obj()) {
+		csenum_node* sol_node = new csenum_node();
+		sol_node->id = -1;
+		sol_node->parent = -1;
+		sol_node->bound = obj;
+		sol_node->tolls = std::move(sol.tolls);
+		
+		for (auto& path : sol.paths) {
+			vector<int> arcs;
+			for (int i = 0; i < path.size() - 1; i++) {
+				auto edge = EDGE_FROM_SRC_DST(prob, path[i], path[i + 1]);
+				arcs.push_back(EDGE_TO_A(prob, edge));
+			}
+			sol_node->arcs.push_back(arcs);
+		}
+
+		add_new_solution(sol_node);
+	}
+}
+
 void csenum_context::update_slack_map(node_type* node)
 {
 	node->slack_map = vector<vector<bool>>(K, vector<bool>(A));
 
 	auto lambda = solver->get_lambda();
-	auto t = solver->get_t();
+	auto t = node->tolls;
 
 	LOOP(k, K) LOOP(a, A) {
 		SRC_DST_FROM_A(prob, a);
@@ -169,6 +206,9 @@ void csenum_context::update_slack_map(node_type* node)
 		// Set slack map
 		node->slack_map[k][a] = (abs(slack) > TOLERANCE);
 	}
+
+	LOOP(k, K) lambda[k].end();
+	lambda.end();
 }
 
 void csenum_context::update_candidate_list(node_type* node)

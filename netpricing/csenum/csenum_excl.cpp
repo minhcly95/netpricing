@@ -34,6 +34,8 @@ string csenum_excl::get_report()
 {
 	ostringstream ss;
 	ss << "OBJ: " << context.get_best_obj() << endl <<
-		"TIME: " << get_time() << " s" << endl;
+		"TIME: " << get_time() << " s" <<
+		"    StrEval " << context.strong_eval_time << " s" <<
+		"    Heur " << context.heur.time << " s" << endl;
 	return ss.str();
 }

@@ -47,10 +47,29 @@ void csenum_solver_excl::build_primal_model()
 		LOOP(k, K) flow_constr[k][dst].setLinearCoef(z[k][a], -1);
 	}
 
+	// Unique out/in
+	unique_out = RangeMatrix(env, K);
+	unique_in = RangeMatrix(env, K);
+
+	LOOP(k, K) {
+		unique_out[k] = RangeArray(env, V, 0, 1);
+		unique_in[k] = RangeArray(env, V, 0, 1);
+	}
+
+	LOOP(a, A) {
+		SRC_DST_FROM_A(prob, a);
+		LOOP(k, K) {
+			unique_out[k][src].setLinearCoef(z[k][a], 1);
+			unique_in[k][dst].setLinearCoef(z[k][a], 1);
+		}
+	}
+
 	// Add to model
 	LOOP(k, K) {
 		primal_models[k].add(primal_objs[k]);
 		primal_models[k].add(flow_constr[k]);
+		primal_models[k].add(unique_out[k]);
+		primal_models[k].add(unique_in[k]);
 		primal_cplex[k].setOut(env.getNullStream());
 	}
 }
@@ -70,6 +89,8 @@ std::vector<int> csenum_solver_excl::get_primal_arcs(int k)
 		if (zvals[a] > 0.5)
 			arcs.push_back(a);
 	}
+
+	zvals.end();
 
 	return arcs;
 }
