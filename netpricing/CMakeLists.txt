@@ -52,6 +52,7 @@ add_executable(netpricing
 	"routines/follower_solver_perftest.cpp"
 	"routines/inverse_solver_test.cpp"
 	"routines/tolls_heuristic_test.cpp"
+	"routines/light_graph_test.cpp"
 
 	"graph/light_graph.cpp")
 

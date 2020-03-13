@@ -9,3 +9,8 @@ void inverse_solver_acctest();
 void inverse_solver_perftest();
 
 void tolls_heuristic_perftest();
+
+void light_graph_dijkstra_acctest();
+void light_graph_dijkstra_perftest();
+void light_graph_yen_acctest();
+void light_graph_yen_perftest();

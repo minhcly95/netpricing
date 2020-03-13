@@ -2,10 +2,13 @@
 
 #include "../macros.h"
 
+#include <algorithm>
+#include <queue>
+
 using namespace std;
 
 light_graph::light_graph(const problem_base::graph_type& graph) :
-	V(boost::num_vertices(graph)), E(V)
+	V(boost::num_vertices(graph)), E(V), temp_enabled_V(V, true)
 {
 	auto cost_map = boost::get(boost::edge_weight, graph);
 	auto is_tolled_map = boost::get(edge_tolled, graph);
@@ -23,13 +26,16 @@ light_graph::light_graph(const problem_base::graph_type& graph) :
 			.cost = cost,
 			.is_tolled = is_tolled,
 			.toll = 0,
-			.enabled = true
+			.enabled = true,
+			.temp_enabled = true
 		};
 	}
 }
 
 light_graph::path light_graph::shortest_path(int from, int to)
 {
+	using cipair = std::pair<cost_type, int>;
+
 	vector<int> parents(V, -1);
 	vector<cost_type> distances(V, numeric_limits<double>::infinity());
 	vector<bool> closed(V, false);
@@ -45,6 +51,9 @@ light_graph::path light_graph::shortest_path(int from, int to)
 	while (!queue.empty()) {
 		int src = queue.top().second;
 
+		if (!temp_enabled_V[src])
+			throw logic_error("Light graph error: queued node must be enabled");
+
 		// Break if destination reached
 		if (src == to)
 			break;
@@ -58,10 +67,14 @@ light_graph::path light_graph::shortest_path(int from, int to)
 		// Loop for each edge from curr
 		cost_type curr_dist = distances[src];
 		for (auto it = E[src].begin(); it != E[src].end(); ++it) {
+			// Skip disabled node
+			if (!temp_enabled_V[it->first])
+				continue;
+
 			light_edge& edge = it->second;
 
 			// Skip disabled edge
-			if (!edge.enabled)
+			if (!edge.enabled || !edge.temp_enabled)
 				continue;
 
 			int dst = edge.dst;
@@ -108,4 +121,92 @@ double light_graph::get_path_cost(const path& p)
 	}
 
 	return sum;
+}
+
+vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K)
+{
+	using cppair = std::pair<cost_type, path>;
+
+	clear_temp_states();
+
+	// List of shortest paths A
+	vector<path> A;
+
+	// Heap of candidates B
+	std::priority_queue<cppair, vector<cppair>, std::greater<cppair>> B;
+
+	// First shortest path
+	path p = shortest_path(from, to);
+	if (!p.empty())
+		A.emplace_back(std::move(p));
+	else
+		return A;
+
+	for (int k = 1; k < K; k++) {
+		const path& last_path = A.back();
+
+		// Look up for root path mismatch
+		vector<bool> root_path_matchable(A.size(), true);
+
+		// For each spur node except the last one
+		for (int i = 0; i < last_path.size() - 1; i++) {
+			int spur_node = last_path[i];
+
+			// Root path (later total path)
+			path new_path(last_path.begin(), last_path.begin() + i + 1);
+
+			// If another shortest path shares the same root path, remove the next edge
+			for (int j = 0; j < A.size(); j++) {
+				if (!root_path_matchable[j])
+					continue;
+
+				const path& p = A[j];
+
+				// if root_path_matchable[j] is true, all previous nodes of A[j] and new_path are matched
+				if (p.size() > i && p[i] == spur_node) {
+					E[p[i]][p[i + 1]].temp_enabled = false;
+				}
+				else {
+					root_path_matchable[j] = false;
+				}
+			}
+
+			// Remove all nodes in the root path except for the spur node
+			for (int node : new_path)
+				if (node != spur_node)
+					temp_enabled_V[node] = false;
+
+			// Calculate the spur path
+			path spur_path = shortest_path(spur_node, to);
+			if (!spur_path.empty()) {
+				new_path.insert(new_path.end(), spur_path.begin() + 1, spur_path.end());
+				double cost = get_path_cost(new_path);
+
+				// Duplicated path will be removed when popped
+				B.push(make_pair(cost, new_path));
+			}
+
+			// Restore the temp states
+			clear_temp_states();
+		}
+
+		// Break if there are no candidates
+		if (B.empty())
+			break;
+
+		// Move the best candidate to A (remove all duplicates in the process)
+		path best_path = B.top().second;
+		while (B.top().second == best_path)
+			B.pop();
+
+		A.emplace_back(std::move(best_path));
+	}
+
+	return A;
+}
+
+void light_graph::clear_temp_states()
+{
+	fill(temp_enabled_V.begin(), temp_enabled_V.end(), true);
+	LOOP(i, V) for (auto& entry : E[i]) entry.second.temp_enabled = true;
 }

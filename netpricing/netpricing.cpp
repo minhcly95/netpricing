@@ -317,6 +317,10 @@ void run_routine(int index)
 	case 4: inverse_solver_acctest(); break;
 	case 5: inverse_solver_perftest(); break;
 	case 6: tolls_heuristic_perftest(); break;
+	case 7: light_graph_dijkstra_acctest(); break;
+	case 8: light_graph_dijkstra_perftest(); break;
+	case 9: light_graph_yen_acctest(); break;
+	case 10: light_graph_yen_perftest(); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;
