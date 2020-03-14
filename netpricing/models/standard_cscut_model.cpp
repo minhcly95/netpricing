@@ -68,7 +68,7 @@ ILOCPLEXGOAL1(standard_cscut_model_goal, standard_cscut_model&, m) {
 
 standard_cscut_model::standard_cscut_model(IloEnv& env, const problem& _prob) :
 	model_with_goal(env, standard_cscut_model_goal(env, *this)), model_single(_prob),
-	goal_time(0), cut_count(0) {
+	cut_count(0) {
 	// Typedef
 	using namespace std;
 	using namespace boost;
@@ -212,10 +212,8 @@ std::string standard_cscut_model::get_report()
 	using namespace std;
 
 	ostringstream ss;
-	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << get_time() << " s" <<
-		"    Goal " << goal_time << " s" << endl <<
-		"CUTS: " << cut_count << endl;
+	ss << model_with_goal::get_report();
+	ss << "CUTS: " << cut_count << endl;
 
 	return ss.str();
 }

@@ -30,12 +30,22 @@ solution csenum_excl::get_solution()
 	return sol;
 }
 
-string csenum_excl::get_report()
+double csenum_excl::get_best_obj()
 {
-	ostringstream ss;
-	ss << "OBJ: " << context.get_best_obj() << endl <<
-		"TIME: " << get_time() << " s" <<
-		"    StrEval " << context.strong_eval_time << " s" <<
-		"    Heur " << context.heur.time << " s" << endl;
-	return ss.str();
+	return context.get_best_obj();
+}
+
+double csenum_excl::get_best_bound()
+{
+	return context.get_best_bound();
+}
+
+double csenum_excl::get_gap()
+{
+	return context.get_gap_ratio();
+}
+
+int csenum_excl::get_step_count()
+{
+	return context.step_count;
 }

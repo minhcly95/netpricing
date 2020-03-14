@@ -82,7 +82,7 @@ ILOCPLEXGOAL1(slackbranch_model_goal, slackbranch_model&, m) {
 }
 
 slackbranch_model::slackbranch_model(IloEnv& env, const problem& _prob) :
-	model_with_goal(env, slackbranch_model_goal(env, *this)), model_single(_prob), goal_time(0) {
+	model_with_goal(env, slackbranch_model_goal(env, *this)), model_single(_prob) {
 	// Typedef
 	using namespace std;
 	using namespace boost;
@@ -219,16 +219,4 @@ solution slackbranch_model::get_solution()
 	tvals.end();
 
 	return sol;
-}
-
-std::string slackbranch_model::get_report()
-{
-	using namespace std;
-
-	ostringstream ss;
-	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << get_time() << " s" <<
-		"    Goal " << goal_time << " s" << endl;
-
-	return ss.str();
 }

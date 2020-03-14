@@ -14,64 +14,11 @@ ILOCPLEXGOAL1(standard_goal_model_goal, standard_goal_model&, m) {
 	using RangeArray = standard_goal_model::RangeArray;
 
 	IloEnv env(getEnv());
-	int varsel = m.cplex.getParam(IloCplex::Param::MIP::Strategy::VariableSelect);
 
 	if (isIntegerFeasible())
 		return 0;
 
 	return AndGoal(BranchAsCplexGoal(env), this);
-
-	// Default strategy
-	//if (varsel == 0) {
-	//	return AndGoal(BranchAsCplexGoal(env), this);
-	//}
-	//// Pseudo-cost branching
-	//else if (varsel == 2) {
-	//	NumMatrix xvals(env, m.K);
-	//	IloArray<IntegerFeasibilityArray> feas(env, m.K);
-
-	//	LOOP(k, m.K) {
-	//		xvals[k] = NumArray(env);
-	//		getValues(xvals[k], m.x[k]);
-	//		feas[k] = IntegerFeasibilityArray(env);
-	//		getFeasibilities(feas[k], m.x[k]);
-	//	}
-
-	//	int bestk = -1, besta = -1;
-	//	double bestscore = 0;
-	//	LOOP(k, m.K) LOOP(a, m.A1) {
-	//		if (feas[k][a] == Infeasible) {
-	//			double x_inf = xvals[k][a] - IloFloor(xvals[k][a]);
-	//			double down_estimate = getDownPseudoCost(m.x[k][a]) * x_inf;
-	//			double up_estimate = getUpPseudoCost(m.x[k][a]) * (1 - x_inf);
-	//			double min_estimate = min(down_estimate, up_estimate);
-	//			double max_estimate = max(down_estimate, up_estimate);
-	//			double score = 5 * min_estimate / 6 + max_estimate / 6;
-
-	//			if (score > bestscore) {
-	//				bestscore = score;
-	//				bestk = k;
-	//				besta = a;
-	//			}
-	//		}
-	//	}
-
-	//	IloNumVar var = m.x[bestk][besta];
-	//	//IloRange comp_range = m.dual_feas[bestk][besta];
-	//	//auto expr = comp_range.getExpr();
-	//	//double rhs = comp_range.getUB();
-
-	//	auto res = AndGoal(OrGoal(var == 0, var == 1), this);
-
-	//	clean_up(xvals);
-	//	LOOP(k, m.K) feas[k].end();
-	//	feas.end();
-
-	//	return res;
-	//}
-	//else {
-	//	throw "Standard Goal Model: Wrong variable selection strategy";
-	//}
 }
 
 standard_goal_model::standard_goal_model(IloEnv& env, const problem& _prob) :
@@ -212,15 +159,4 @@ solution standard_goal_model::get_solution()
 	tvals.end();
 
 	return sol;
-}
-
-std::string standard_goal_model::get_report()
-{
-	using namespace std;
-
-	ostringstream ss;
-	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << get_time() << " s" << endl;
-
-	return ss.str();
 }

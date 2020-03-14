@@ -7,11 +7,15 @@
 #include <utility>
 #include <chrono>
 #include <ilcplex/ilocplex.h>
+#include <vector>
+#include <sstream>
 
 struct model_config {
 	int num_thread;
 	int var_select;
 	int time_limit;
+	int heur_freq;
+	std::vector<const char*> args;
 };
 
 struct model_base {
@@ -37,7 +41,23 @@ struct model_base {
 
 	virtual solution get_solution() = 0;
 
-	virtual std::string get_report() = 0;
+	virtual double get_best_obj() { return -1; }
+	virtual double get_best_bound() { return -1; }
+	virtual double get_gap() { return -1; }
+	virtual int get_step_count() { return -1; }
+
+	virtual std::string get_report() {
+		using namespace std;
+		ostringstream ss;
+		ss <<
+			"TIME: " << get_time() << " s" << endl <<
+			"OBJ: " << get_best_obj() << endl <<
+			"BOUND: " << get_best_bound() << endl <<
+			"GAP: " << get_gap() * 100 << "%" << endl <<
+			"STEP: " << get_step_count() << endl;
+
+		return ss.str();
+	}
 };
 
 struct model_single {

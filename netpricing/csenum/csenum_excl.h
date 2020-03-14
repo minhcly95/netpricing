@@ -13,6 +13,10 @@ struct csenum_excl : public model_base, public cplex_def {
 	// Inherited via model_base
 	virtual bool solve_impl() override;
 	virtual solution get_solution() override;
-	virtual std::string get_report() override;
 	virtual void config(const model_config& config) override;
+
+	virtual double get_best_obj() override;
+	virtual double get_best_bound() override;
+	virtual double get_gap() override;
+	virtual int get_step_count() override;
 };

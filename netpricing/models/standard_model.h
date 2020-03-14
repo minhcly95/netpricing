@@ -25,7 +25,6 @@ struct standard_model : public model_cplex, public model_single {
 	standard_model(IloEnv& env, const problem& prob);
 
 	virtual solution get_solution() override;
-	virtual std::string get_report() override;
 };
 
 

@@ -25,7 +25,6 @@ struct standard_goal_model : public model_with_goal, public model_single {
 	standard_goal_model(IloEnv& env, const problem& prob);
 
 	virtual solution get_solution() override;
-	virtual std::string get_report() override;
 };
 
 

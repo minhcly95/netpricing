@@ -34,7 +34,18 @@ struct model_cplex : public model_base, public cplex_def {
 
 	virtual solution get_solution() = 0;
 
-	virtual std::string get_report() = 0;
+	virtual double get_best_obj() override {
+		return cplex.getObjValue();
+	}
+	virtual double get_best_bound() override {
+		return cplex.getBestObjValue();
+	}
+	virtual double get_gap() override {
+		return cplex.getMIPRelativeGap();
+	}
+	virtual int get_step_count() override {
+		return cplex.getNnodes();
+	}
 };
 
 struct model_with_callbacks : public model_cplex {
@@ -94,10 +105,18 @@ struct model_with_generic_callbacks : public model_cplex {
 
 struct model_with_goal : public model_cplex {
 	IloCplex::Goal goal;
+	double goal_time;
 
-	model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_cplex(env), goal(goal) {}
+	model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_cplex(env), goal(goal), goal_time(0) {}
 
 	virtual bool solve_impl() override {
 		return cplex.solve(goal);
+	}
+
+	virtual std::string get_report() override {
+		std::ostringstream ss;
+		ss << model_cplex::get_report();
+		ss << "GOAL: " << goal_time << " s" << std::endl;
+		return ss.str();
 	}
 };

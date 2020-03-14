@@ -25,7 +25,6 @@ struct standard_model_multi : public model_cplex, public model_multi {
 	standard_model_multi(IloEnv& env, const problem_multi& prob);
 
 	virtual solution get_solution() override;
-	virtual std::string get_report() override;
 };
 
 

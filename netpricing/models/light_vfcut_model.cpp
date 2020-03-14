@@ -220,27 +220,27 @@ void light_vfcut_model::init_variable_name() {
 	LOOP(k, K) {
 		LOOP(a, A1) {
 			SRC_DST_FROM_A1(prob, a);
-			char name[20];
+			char name[50];
 			sprintf(name, "x[%d,%d->%d]", k, src, dst);
 			x[k][a].setName(name);
 		}
 
 		LOOP(a, A2) {
 			SRC_DST_FROM_A2(prob, a);
-			char name[20];
+			char name[50];
 			sprintf(name, "y[%d,%d->%d]", k, src, dst);
 			y[k][a].setName(name);
 		}
 
 		LOOP(a, A1) {
 			SRC_DST_FROM_A1(prob, a);
-			char name[20];
+			char name[50];
 			sprintf(name, "tx[%d,%d->%d]", k, src, dst);
 			tx[k][a].setName(name);
 		}
 
 		LOOP(i, V) {
-			char name[20];
+			char name[50];
 			sprintf(name, "lbd[%d,%d]", k, i);
 			lambda[k][i].setName(name);
 		}
@@ -248,7 +248,7 @@ void light_vfcut_model::init_variable_name() {
 
 	LOOP(a, A1) {
 		SRC_DST_FROM_A1(prob, a);
-		char name[20];
+		char name[50];
 		sprintf(name, "t[%d->%d]", src, dst);
 		t[a].setName(name);
 	}
@@ -340,12 +340,12 @@ solution light_vfcut_model::get_solution()
 std::string light_vfcut_model::get_report()
 {
 	ostringstream ss;
-	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << get_time() << " s" <<
-		"    Sep " << separate_time << " s" <<
+	ss << model_cplex::get_report();
+	ss <<
+		"SEP: " << separate_count <<
+		"    Time " << separate_time << " s" <<
 		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
-		"    Sub " << (subprob_time * 100 / separate_time) << "%" << endl <<
-		"SEP: Total " << separate_count << endl;
+		"    Sub " << (subprob_time * 100 / separate_time) << "%" << endl;
 
 	return ss.str();
 }

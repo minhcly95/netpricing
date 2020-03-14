@@ -156,14 +156,3 @@ solution standard_model_multi::get_solution()
 
 	return sol;
 }
-
-std::string standard_model_multi::get_report()
-{
-	using namespace std;
-
-	ostringstream ss;
-	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << get_time() << " s" << endl;
-
-	return ss.str();
-}

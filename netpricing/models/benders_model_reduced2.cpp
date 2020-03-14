@@ -50,7 +50,7 @@ benders_model_reduced2::benders_model_reduced2(IloEnv& env, const problem& _prob
 		LOOP(a, A1) {
 			SRC_DST_FROM_A1(prob, a);
 
-			char name[20];
+			char name[50];
 			sprintf(name, "x[%d,%d->%d]", k, src, dst);
 			x[k][a].setName(name);
 		}
@@ -95,20 +95,20 @@ void benders_model_reduced2::init_subproblem()
 
 		LOOP(a, A2) {
 			SRC_DST_FROM_A2(prob, a);
-			char name[20];
+			char name[50];
 			sprintf(name, "y[%d,%d->%d]", k, src, dst);
 			y[k][a].setName(name);
 		}
 
 		LOOP(i, V) {
-			char name[20];
+			char name[50];
 			sprintf(name, "lambda[%d,%d]", k, i);
 			lambda[k][i].setName(name);
 		}
 
 		LOOP(a, A1) {
 			SRC_DST_FROM_A1(prob, a);
-			char name[20];
+			char name[50];
 			sprintf(name, "tx[%d,%d->%d]", k, src, dst);
 			tx[k][a].setName(name);
 		}
@@ -116,7 +116,7 @@ void benders_model_reduced2::init_subproblem()
 
 	LOOP(a, A1) {
 		SRC_DST_FROM_A1(prob, a);
-		char name[20];
+		char name[50];
 		sprintf(name, "t[%d->%d]", src, dst);
 		t[a].setName(name);
 	}
@@ -565,18 +565,18 @@ solution benders_model_reduced2::get_solution()
 std::string benders_model_reduced2::get_report()
 {
 	ostringstream ss;
-	ss << "OBJ: " << cplex.getObjValue() << endl <<
-		"TIME: " << get_time() << " s" <<
-		"    Sep " << separate_time << " s" <<
-		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
-		"    Sub1 " << (subprob1_time * 100 / separate_time) << "%" <<
-		"    Sub2 " << (subprob2_time * 100 / separate_time) << "%" <<
-		"    Sub3 " << (subprob3_time * 100 / separate_time) << "%" << endl <<
-		"SEP: Total " << separate_count <<
+	ss << model_cplex::get_report();
+	ss <<
+		"SEP: " << separate_count <<
 		"    F " << flow_cut_count <<
 		"    P " << path_cut_count <<
 		"    T " << toll_cut_count <<
-		"    O " << opt_cut_count << endl;
+		"    O " << opt_cut_count << endl <<
+		"SEP TIME: " << separate_time << " s" <<
+		"    Avg " << (separate_time * 1000 / separate_count) << " ms" <<
+		"    Sub1 " << (subprob1_time * 100 / separate_time) << "%" <<
+		"    Sub2 " << (subprob2_time * 100 / separate_time) << "%" <<
+		"    Sub3 " << (subprob3_time * 100 / separate_time) << "%" << endl;
 
 	return ss.str();
 }

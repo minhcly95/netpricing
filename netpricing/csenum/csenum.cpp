@@ -21,6 +21,26 @@ void csenum::config(const model_config& config)
 	context.time_limit = config.time_limit;
 }
 
+double csenum::get_best_obj()
+{
+	return context.get_best_obj();
+}
+
+double csenum::get_best_bound()
+{
+	return context.get_best_bound();
+}
+
+double csenum::get_gap()
+{
+	return context.get_gap_ratio();
+}
+
+int csenum::get_step_count()
+{
+	return context.step_count;
+}
+
 solution csenum::get_solution()
 {
 	solution sol;
@@ -28,12 +48,4 @@ solution csenum::get_solution()
 		// TODO: Extract paths and toll
 	}
 	return sol;
-}
-
-string csenum::get_report()
-{
-	ostringstream ss;
-	ss << "OBJ: " << context.get_best_obj() << endl <<
-		"TIME: " << get_time() << " s" << endl;
-	return ss.str();
 }
