@@ -197,9 +197,9 @@ void light_graph_yen_acctest() {
 void light_graph_yen_perftest() {
 	using path = vector<int>;
 
-	cout << "Light graph Yen (100 paths, 5 x 12 grid) performance test..." << endl;
+	cout << "Light graph Yen (1000 paths, 5 x 12 grid) performance test..." << endl;
 
-	const int SAMPLES = 1000;
+	const int SAMPLES = 100;
 	const int REPEAT = 1;
 	const int TOTAL = SAMPLES * REPEAT;
 
@@ -223,7 +223,7 @@ void light_graph_yen_perftest() {
 		auto& lgraph = lgraphs[i];
 
 		LOOP(j, REPEAT) {
-			vector<path> ps = lgraph.k_shortest_paths(from, to, 100);
+			vector<path> ps = lgraph.k_shortest_paths(from, to, 1000);
 		}
 	}
 
@@ -233,3 +233,105 @@ void light_graph_yen_perftest() {
 	cout << "Average time: " << time * 1000 / TOTAL << " ms" << endl;
 }
 
+void light_graph_toll_unique_acctest() {
+	using path = vector<int>;
+
+	cout << "Light graph Toll unique accuracy test..." << endl;
+
+	const int SAMPLES = 100;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<light_graph> lgraphs;
+	vector<int> froms, tos;
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(5, 12, 1, 0.2, random_engine);
+		lgraphs.emplace_back(prob.graph);
+		froms.push_back(prob.commodities[0].origin);
+		tos.push_back(prob.commodities[0].destination);
+	}
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		vector<path> paths = lgraph.toll_unique_paths(from, to, 1000);
+
+		// Verify that the toll sets are unique
+		using odpair = pair<int, int>;
+		set<set<odpair>> all_sets;
+
+		for (const path& path : paths) {
+			// Get the set of toll arcs
+			set<odpair> toll_set;
+			for (int i = 0; i < path.size() - 1; i++)
+				if (lgraph.E[path[i]][path[i + 1]].is_tolled)
+					toll_set.emplace(path[i], path[i + 1]);
+
+			// Add to all sets, throw if existed
+			if (!all_sets.insert(toll_set).second) {
+				cerr << "Toll set is not unique" << endl;
+				return;
+			}
+		}
+	}
+
+	cout << "Light graph Toll unique produced accurate results" << endl;
+}
+
+void light_graph_toll_unique_perftest() {
+	using path = vector<int>;
+
+	cout << "Light graph Toll unique (1000 paths, 5 x 12 grid) performance test..." << endl;
+
+	const int SAMPLES = 100;
+	const int REPEAT = 1;
+	const int TOTAL = SAMPLES * REPEAT;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<light_graph> lgraphs;
+	vector<int> froms, tos;
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(5, 12, 1, 0.2, random_engine);
+		lgraphs.emplace_back(prob.graph);
+		froms.push_back(prob.commodities[0].origin);
+		tos.push_back(prob.commodities[0].destination);
+	}
+
+	auto start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.k_shortest_paths(from, to, 1000);
+		}
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	double time = chrono::duration<double>(end - start).count();
+
+	cout << "K paths: " << time * 1000 / TOTAL << " ms" << endl;
+
+	start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.toll_unique_paths(from, to, 1000);
+		}
+	}
+
+	end = chrono::high_resolution_clock::now();
+	time = chrono::duration<double>(end - start).count();
+
+	cout << "Toll unique: " << time * 1000 / TOTAL << " ms" << endl;
+}

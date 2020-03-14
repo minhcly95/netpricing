@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <queue>
+#include <tuple>
+#include <set>
 
 using namespace std;
 
@@ -123,7 +125,7 @@ double light_graph::get_path_cost(const path& p)
 	return sum;
 }
 
-vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K)
+vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K, bool toll_free_break)
 {
 	using cppair = std::pair<cost_type, path>;
 
@@ -199,7 +201,21 @@ vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K)
 		while (B.top().second == best_path)
 			B.pop();
 
+		// Test for toll-free path
+		bool is_toll_free = toll_free_break;
+		if (toll_free_break) {
+			for (int i = 0; i < best_path.size() - 1; i++) {
+				if (E[best_path[i]][best_path[i + 1]].is_tolled) {
+					is_toll_free = false;
+					break;
+				}
+			}
+		}
+
 		A.emplace_back(std::move(best_path));
+
+		if (is_toll_free)
+			break;
 	}
 
 	return A;
@@ -209,4 +225,35 @@ void light_graph::clear_temp_states()
 {
 	fill(temp_enabled_V.begin(), temp_enabled_V.end(), true);
 	LOOP(i, V) for (auto& entry : E[i]) entry.second.temp_enabled = true;
+}
+
+vector<light_graph::path> light_graph::toll_unique_paths(int from, int to, int k)
+{
+	vector<path> kpaths = k_shortest_paths(from, to, k, true);
+	vector<path> rpaths;
+
+	using odpair = pair<int, int>;
+	set<set<odpair>> visited_sets;
+
+	for (const path& path : kpaths) {
+		// Get the set of toll arcs
+		set<odpair> toll_set;
+		for (int i = 0; i < path.size() - 1; i++)
+			if (E[path[i]][path[i + 1]].is_tolled)
+				toll_set.emplace(path[i], path[i + 1]);
+
+		// If the toll set is empty, break (because this's the last choice of the commodity)
+		if (toll_set.empty()) {
+			rpaths.push_back(path);
+			break;
+		}
+
+		// Try adding to visited sets
+		if (visited_sets.emplace(std::move(toll_set)).second) {
+			// If not visited, add to rpaths
+			rpaths.push_back(path);
+		}
+	}
+
+	return rpaths;
 }

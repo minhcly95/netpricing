@@ -31,6 +31,8 @@ struct light_graph
 	double get_path_cost(const path& p);
 
 	// Yen's algorithm
-	std::vector<path> k_shortest_paths(int from, int to, int k);
+	std::vector<path> k_shortest_paths(int from, int to, int k, bool toll_free_break = false);
 	void clear_temp_states();
+
+	std::vector<path> toll_unique_paths(int from, int to, int k);
 };
