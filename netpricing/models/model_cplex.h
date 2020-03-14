@@ -15,7 +15,10 @@ struct model_cplex : public model_base, public cplex_def {
 		return cplex;
 	}
 
+	virtual void presolve() {}
+
 	virtual bool solve_impl() override {
+		presolve();
 		return cplex.solve();
 	}
 
@@ -31,8 +34,6 @@ struct model_cplex : public model_base, public cplex_def {
 		cplex.end();
 		cplex_model.end();
 	}
-
-	virtual solution get_solution() = 0;
 
 	virtual double get_best_obj() override {
 		return cplex.getObjValue();

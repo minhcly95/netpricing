@@ -1,9 +1,8 @@
 #pragma once
 
 #include "model_cplex.h"
+#include "../utilities/vfcut_builder.h"
 #include <unordered_map>
-#include <atomic>
-#include <mutex>
 
 struct problem;
 
@@ -22,24 +21,28 @@ struct value_func_model : public model_with_generic_callbacks, public model_sing
 	RangeMatrix bilinear2;
 	RangeMatrix bilinear3;
 
+	// Cut builder
+	vfcut_builder builder;
+
+	// Parameters
+	int heur_freq;
+	int pre_cut;
+
 	// Utilities
-	double separate_time;
-	double subprob_time;
-	int separate_count;
+	double presolve_time;
+	int presolve_cut_count;
 
 	value_func_model(IloEnv& env, const problem& prob);
 
 	void init_variable_name();
 
-	void separate(const NumArray& tvals,
-				  RangeArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj);
-	void separate_inner(const NumArray& tvals,
-						RangeArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj);
-
 	// Inherited via model_with_callback
 	virtual solution get_solution() override;
 	virtual std::string get_report() override;
 	virtual std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> attach_callbacks() override;
+
+	virtual void presolve() override;
+	virtual void config(const model_config& conf) override;
 };
 
 

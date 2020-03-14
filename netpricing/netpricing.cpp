@@ -22,9 +22,7 @@ namespace po = boost::program_options;
 
 struct config {
 	json& sols_obj;
-	int num_thread;
-	int var_select;
-	int time_limit;
+	model_config mconfig;
 };
 
 template <class P, class T>
@@ -48,11 +46,7 @@ string run_model(IloEnv& env, typename model_type::problem_type& prob, string mo
 		cout << model_name << endl;
 
 		model_type model(env, prob);
-		model.config(model_config{
-			.num_thread = conf.num_thread,
-			.var_select = conf.var_select,
-			.time_limit = conf.time_limit
-					 });
+		model.config(conf.mconfig);
 
 		if (!model.solve()) {
 			env.error() << "Failed to optimize LP." << endl;
@@ -87,7 +81,7 @@ int main(int argc, char* argv[])
 	// Parameter processing
 	po::options_description desc("Allowed options");
 	desc.add_options()
-		("help,h", "display help message")
+		("help", "display help message")
 		("routine,r", po::value<int>(), "run special routines")
 		("standard,s", "run standard model")
 		("vfcut", "run standard model with value function cuts")
@@ -108,6 +102,8 @@ int main(int argc, char* argv[])
 		("thread,t", po::value<int>()->default_value(DEFAULT_NUM_THREADS), "number of threads")
 		("var-select,v", po::value<int>()->default_value(IloCplex::DefaultVarSel), "variable selection strategy")
 		("time,T", po::value<int>()->default_value(0), "time limit (0 = no limit)")
+		("heur-freq,h", po::value<int>()->default_value(-1), "heuristic frequency (-1 = default)")
+		("pre-cut", po::value<int>()->default_value(0), "number of cuts added per commodity pre-solved")
 		("nodes,n", po::value<int>()->default_value(10), "number of nodes in the random problem")
 		("arcs,a", po::value<int>()->default_value(20), "number of arcs in the random problem")
 		("commodities,k", po::value<int>()->default_value(5), "number of commodities in the random problem")
@@ -217,18 +213,26 @@ int main(int argc, char* argv[])
 	const int num_thread = vm["thread"].as<int>();
 	const int var_select = vm["var-select"].as<int>();
 	const int time_limit = vm["time"].as<int>();
+	const int heur_freq = vm["heur-freq"].as<int>();
+	const int pre_cut = vm["pre-cut"].as<int>();
 
 	// Configuration
 	config conf = {
 		sols_obj,
-		num_thread,
-		var_select,
-		time_limit
+		model_config {
+			.num_thread = num_thread,
+			.var_select = var_select,
+			.time_limit = time_limit,
+			.heur_freq = heur_freq,
+			.pre_cut = pre_cut
+		}
 	};
 	cout << "Config:" << endl <<
-			"  Number of threads: " << num_thread << endl <<
-			"  Variable selection: " << var_select << endl <<
-			"  Time limit: " << time_limit << endl;
+		"  Number of threads: " << num_thread << endl <<
+		"  Variable selection: " << var_select << endl <<
+		"  Time limit: " << time_limit << endl <<
+		"  Heuristic frequency: " << heur_freq << endl <<
+		"  Pre-solved cuts: " << pre_cut << endl;
 
 	if (vm.count("standard")) {
 		report << "STANDARD:" << endl <<

@@ -48,6 +48,7 @@ add_executable(netpricing
 	"utilities/follower_cplex_solver.cpp"
 	"utilities/follower_light_solver.cpp"
 	"utilities/inverse_solver.cpp"
+	"utilities/vfcut_builder.cpp"
 
 	"routines/follower_solver_perftest.cpp"
 	"routines/inverse_solver_test.cpp"

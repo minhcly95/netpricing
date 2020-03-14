@@ -15,7 +15,7 @@ struct model_config {
 	int var_select;
 	int time_limit;
 	int heur_freq;
-	std::vector<const char*> args;
+	int pre_cut;
 };
 
 struct model_base {
@@ -53,7 +53,7 @@ struct model_base {
 			"TIME: " << get_time() << " s" << endl <<
 			"OBJ: " << get_best_obj() << endl <<
 			"BOUND: " << get_best_bound() << endl <<
-			"GAP: " << get_gap() * 100 << "%" << endl <<
+			"GAP: " << get_gap() * 100 << " %" << endl <<
 			"STEP: " << get_step_count() << endl;
 
 		return ss.str();
