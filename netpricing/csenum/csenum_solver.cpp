@@ -49,11 +49,11 @@ void csenum_solver::clear_primal_state_impl()
 void csenum_solver::push_primal_state_impl(const csenum_coor& coor)
 {
 	SRC_DST_FROM_A(prob, coor.a);
-	primal_lgraphs[coor.k].E[src][dst].enabled = false;
+	primal_lgraphs[coor.k].edge(src, dst).enabled = false;
 }
 
 void csenum_solver::pop_primal_state_impl(const csenum_coor& coor)
 {
 	SRC_DST_FROM_A(prob, coor.a);
-	primal_lgraphs[coor.k].E[src][dst].enabled = true;
+	primal_lgraphs[coor.k].edge(src, dst).enabled = true;
 }

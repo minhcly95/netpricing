@@ -10,7 +10,8 @@
 using namespace std;
 
 light_graph::light_graph(const problem_base::graph_type& graph) :
-	V(boost::num_vertices(graph)), E(V), temp_enabled_V(V, true)
+	V(boost::num_vertices(graph)), Eall(), E(V), Er(V),
+	temp_enabled_V(V, true)
 {
 	auto cost_map = boost::get(boost::edge_weight, graph);
 	auto is_tolled_map = boost::get(edge_tolled, graph);
@@ -22,7 +23,7 @@ light_graph::light_graph(const problem_base::graph_type& graph) :
 		cost_type cost = cost_map[*ei];
 		bool is_tolled = is_tolled_map[*ei];
 
-		E[src][dst] = light_edge{
+		Eall.emplace_back(light_edge{
 			.src = src,
 			.dst = dst,
 			.cost = cost,
@@ -30,74 +31,43 @@ light_graph::light_graph(const problem_base::graph_type& graph) :
 			.toll = 0,
 			.enabled = true,
 			.temp_enabled = true
-		};
+							   });
+	}
+
+	for (auto& edge : Eall) {
+		E[edge.src].emplace(edge.dst, edge);
+		Er[edge.dst].emplace(edge.src, edge);
+	}
+}
+
+light_edge& light_graph::edge(int src, int dst)
+{
+	return E[src].at(dst);
+}
+
+void light_graph::set_toll_arcs_enabled(bool enabled)
+{
+	for (auto& edge : Eall) {
+		if (edge.is_tolled)
+			edge.enabled = enabled;
+	}
+}
+
+void light_graph::clear_toll()
+{
+	for (auto& edge : Eall) {
+		if (edge.is_tolled)
+			edge.toll = 0;
 	}
 }
 
 light_graph::path light_graph::shortest_path(int from, int to)
 {
-	using cipair = std::pair<cost_type, int>;
+	vector<int> parents;
+	vector<cost_type> distances;
 
-	vector<int> parents(V, -1);
-	vector<cost_type> distances(V, numeric_limits<double>::infinity());
-	vector<bool> closed(V, false);
-
-	std::priority_queue<cipair, vector<cipair>, std::greater<cipair>> queue;
-
-	// First node
-	queue.push(make_pair(0, from));
-	distances[from] = 0;
-	parents[from] = from;
-
-	// Until queue is empty
-	while (!queue.empty()) {
-		int src = queue.top().second;
-
-		if (!temp_enabled_V[src])
-			throw logic_error("Light graph error: queued node must be enabled");
-
-		// Break if destination reached
-		if (src == to)
-			break;
-
-		queue.pop();
-
-		// Already closed
-		if (closed[src])
-			continue;
-
-		// Loop for each edge from curr
-		cost_type curr_dist = distances[src];
-		for (auto it = E[src].begin(); it != E[src].end(); ++it) {
-			// Skip disabled node
-			if (!temp_enabled_V[it->first])
-				continue;
-
-			light_edge& edge = it->second;
-
-			// Skip disabled edge
-			if (!edge.enabled || !edge.temp_enabled)
-				continue;
-
-			int dst = edge.dst;
-			cost_type new_dist = curr_dist + edge.cost + edge.toll;
-
-			// New distance is better
-			if (new_dist < distances[dst]) {
-				distances[dst] = new_dist;
-				parents[dst] = src;
-
-				// Add a new entry to the queue
-				queue.push(make_pair(new_dist, dst));
-			}
-		}
-
-		// Close the vertex
-		closed[src] = true;
-	}
-
-	// If the queue is empty, the destination was not reached
-	if (queue.empty())
+	// If "to" is not reached, return empty path
+	if (!dijkstra(from, distances, parents, to))
 		return path();
 
 	// Trace back the path
@@ -118,7 +88,7 @@ double light_graph::get_path_cost(const path& p)
 	double sum = 0;
 
 	for (int i = 0; i < p.size() - 1; i++) {
-		const auto& edge = E[p[i]][p[i + 1]];
+		const auto& edge = this->edge(p[i], p[i + 1]);
 		sum += edge.cost + edge.toll;
 	}
 
@@ -166,7 +136,7 @@ vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K,
 
 				// if root_path_matchable[j] is true, all previous nodes of A[j] and new_path are matched
 				if (p.size() > i && p[i] == spur_node) {
-					E[p[i]][p[i + 1]].temp_enabled = false;
+					edge(p[i], p[i + 1]).temp_enabled = false;
 				}
 				else {
 					root_path_matchable[j] = false;
@@ -205,7 +175,7 @@ vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K,
 		bool is_toll_free = toll_free_break;
 		if (toll_free_break) {
 			for (int i = 0; i < best_path.size() - 1; i++) {
-				if (E[best_path[i]][best_path[i + 1]].is_tolled) {
+				if (edge(best_path[i], best_path[i + 1]).is_tolled) {
 					is_toll_free = false;
 					break;
 				}
@@ -224,7 +194,7 @@ vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K,
 void light_graph::clear_temp_states()
 {
 	fill(temp_enabled_V.begin(), temp_enabled_V.end(), true);
-	LOOP(i, V) for (auto& entry : E[i]) entry.second.temp_enabled = true;
+	for (auto& edge : Eall) edge.temp_enabled = true;
 }
 
 vector<light_graph::path> light_graph::toll_unique_paths(int from, int to, int k)
@@ -239,7 +209,7 @@ vector<light_graph::path> light_graph::toll_unique_paths(int from, int to, int k
 		// Get the set of toll arcs
 		set<odpair> toll_set;
 		for (int i = 0; i < path.size() - 1; i++)
-			if (E[path[i]][path[i + 1]].is_tolled)
+			if (edge(path[i], path[i + 1]).is_tolled)
 				toll_set.emplace(path[i], path[i + 1]);
 
 		// If the toll set is empty, break (because this's the last choice of the commodity)
@@ -256,4 +226,93 @@ vector<light_graph::path> light_graph::toll_unique_paths(int from, int to, int k
 	}
 
 	return rpaths;
+}
+
+std::vector<cost_type> light_graph::price_from_src(int src)
+{
+	vector<int> parents;
+	vector<cost_type> distances;
+
+	dijkstra(src, distances, parents);
+
+	return distances;
+}
+
+std::vector<cost_type> light_graph::price_to_dst(int dst)
+{
+	vector<int> parents;
+	vector<cost_type> distances;
+
+	dijkstra(dst, distances, parents, -1, true);
+
+	return distances;
+}
+
+bool light_graph::dijkstra(int from, std::vector<cost_type>& distances, std::vector<int>& parents, int to, bool reversed)
+{
+	using cipair = std::pair<cost_type, int>;
+
+	vector<map<int, light_edge&>>& Ec = reversed ? Er : E;
+
+	parents = std::move(vector<int>(V, -1));
+	distances = std::move(vector<cost_type>(V, numeric_limits<double>::infinity()));
+	vector<bool> closed(V, false);
+
+	std::priority_queue<cipair, vector<cipair>, std::greater<cipair>> queue;
+
+	// First node
+	queue.push(make_pair(0, from));
+	distances[from] = 0;
+	parents[from] = from;
+
+	// Until queue is empty
+	while (!queue.empty()) {
+		int src = queue.top().second;
+
+		if (!temp_enabled_V[src])
+			throw logic_error("Light graph error: queued node must be enabled");
+
+		// Break if destination reached
+		if (src == to)
+			break;
+
+		queue.pop();
+
+		// Already closed
+		if (closed[src])
+			continue;
+
+		// Loop for each edge from curr
+		cost_type curr_dist = distances[src];
+		for (auto it = Ec[src].begin(); it != Ec[src].end(); ++it) {
+			// Skip disabled node
+			if (!temp_enabled_V[it->first])
+				continue;
+
+			light_edge& edge = it->second;
+
+			// Skip disabled edge
+			if (!edge.enabled || !edge.temp_enabled)
+				continue;
+
+			int dst = it->first;
+			cost_type new_dist = curr_dist + edge.cost + edge.toll;
+
+			// New distance is better
+			if (new_dist < distances[dst]) {
+				distances[dst] = new_dist;
+				parents[dst] = src;
+
+				// Add a new entry to the queue
+				queue.push(make_pair(new_dist, dst));
+			}
+		}
+
+		// Close the vertex
+		closed[src] = true;
+	}
+
+	// If there is no destination, always return true
+	// If the queue is empty, the destination was not reached, return false
+	return to < 0 || !queue.empty();
 }

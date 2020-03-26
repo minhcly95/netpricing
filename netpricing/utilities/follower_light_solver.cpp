@@ -14,7 +14,7 @@ vector<follower_light_solver::path> follower_light_solver::solve_impl(const vect
 	// Set toll to graph
 	LOOP(a, A1) {
 		SRC_DST_FROM_A1(prob, a);
-		lgraph.E[src][dst].toll = tolls[a] * 0.9999;		// Prefer tolled arcs
+		lgraph.edge(src, dst).toll = tolls[a] * 0.9999;		// Prefer tolled arcs
 	}
 
 	vector<path> paths(K);

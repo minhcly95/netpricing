@@ -267,7 +267,7 @@ void light_graph_toll_unique_acctest() {
 			// Get the set of toll arcs
 			set<odpair> toll_set;
 			for (int i = 0; i < path.size() - 1; i++)
-				if (lgraph.E[path[i]][path[i + 1]].is_tolled)
+				if (lgraph.edge(path[i], path[i + 1]).is_tolled)
 					toll_set.emplace(path[i], path[i + 1]);
 
 			// Add to all sets, throw if existed
@@ -334,4 +334,88 @@ void light_graph_toll_unique_perftest() {
 	time = chrono::duration<double>(end - start).count();
 
 	cout << "Toll unique: " << time * 1000 / TOTAL << " ms" << endl;
+}
+
+void light_graph_price_from_src_acctest() {
+	using path = vector<int>;
+
+	cout << "Light graph Price from src accuracy test..." << endl;
+
+	const int SAMPLES = 1000;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<problem::graph_type> graphs;
+	vector<light_graph> lgraphs;
+	vector<int> froms;
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(5, 12, 1, 0.2, random_engine);
+		graphs.emplace_back(prob.graph);
+		lgraphs.emplace_back(prob.graph);
+		froms.push_back(prob.commodities[0].origin);
+	}
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i];
+		auto& lgraph = lgraphs[i];
+		auto& graph = graphs[i];
+
+		vector<cost_type> prices = lgraph.price_from_src(from);
+
+		LOOP(v, lgraph.V) {
+			path p = lgraph.shortest_path(from, v);
+			cost_type cost = lgraph.get_path_cost(p);
+
+			if (abs(cost - prices[v]) > 0.01) {
+				cerr << "Test failed (" << cost << " != " << prices[v] << ")" << endl;
+				return;
+			}
+		}
+	}
+
+	cout << "Light graph Price from src produced accurate results" << endl;
+}
+
+void light_graph_price_to_dst_acctest() {
+	using path = vector<int>;
+
+	cout << "Light graph Price to dst accuracy test..." << endl;
+
+	const int SAMPLES = 1000;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<problem::graph_type> graphs;
+	vector<light_graph> lgraphs;
+	vector<int> tos;
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(5, 12, 1, 0.2, random_engine);
+		graphs.emplace_back(prob.graph);
+		lgraphs.emplace_back(prob.graph);
+		tos.push_back(prob.commodities[0].destination);
+	}
+
+	LOOP(i, SAMPLES) {
+		int to = tos[i];
+		auto& lgraph = lgraphs[i];
+		auto& graph = graphs[i];
+
+		vector<cost_type> prices = lgraph.price_to_dst(to);
+
+		LOOP(v, lgraph.V) {
+			path p = lgraph.shortest_path(v, to);
+			cost_type cost = lgraph.get_path_cost(p);
+
+			if (abs(cost - prices[v]) > 0.01) {
+				cerr << "Test failed (" << cost << " != " << prices[v] << ")" << endl;
+				return;
+			}
+		}
+	}
+
+	cout << "Light graph Price to dst produced accurate results" << endl;
 }
