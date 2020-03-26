@@ -34,8 +34,6 @@ struct value_func_model : public model_with_generic_callbacks, public model_sing
 
 	value_func_model(IloEnv& env, const problem& prob);
 
-	void init_variable_name();
-
 	// Inherited via model_with_callback
 	virtual solution get_solution() override;
 	virtual std::string get_report() override;

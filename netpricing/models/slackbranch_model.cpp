@@ -1,6 +1,7 @@
 #include "slackbranch_model.h"
 
 #include "../macros.h"
+#include "../utilities/set_var_name.h"
 #include "model_utils.h"
 
 #include <map>
@@ -103,6 +104,8 @@ slackbranch_model::slackbranch_model(IloEnv& env, const problem& _prob) :
 		lambda[k] = NumVarArray(env, V, -IloInfinity, IloInfinity);
 		tx[k] = NumVarArray(env, A1, 0, IloInfinity);
 	}
+
+	SET_VAR_NAMES(*this, x, y, t, tx, lambda);
 
 	// z is used to reference x and y
 	LOOP(a1, A1) {

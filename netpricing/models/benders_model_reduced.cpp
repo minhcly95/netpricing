@@ -1,7 +1,9 @@
 #include "benders_model_reduced.h"
 
 #include "../macros.h"
+#include "../utilities/set_var_name.h"
 #include "model_utils.h"
+
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -46,13 +48,6 @@ benders_model_reduced::benders_model_reduced(IloEnv& env, const problem& _prob) 
 
 	LOOP(k, K) {
 		x[k] = NumVarArray(env, A1, 0, 1, ILOBOOL);
-		LOOP(a, A1) {
-			SRC_DST_FROM_A1(prob, a);
-
-			char name[50];
-			sprintf(name, "x[%d,%d->%d]", k, src, dst);
-			x[k][a].setName(name);
-		}
 	}
 
 	// Objective
@@ -77,6 +72,8 @@ benders_model_reduced::benders_model_reduced(IloEnv& env, const problem& _prob) 
 		alpha[k] = NumArray(env, A1);
 		beta[k] = NumArray(env, A1);
 	}
+
+	SET_VAR_NAMES(*this, x, y, t, tx, lambda);
 }
 
 void benders_model_reduced::init_subproblem()
@@ -91,33 +88,6 @@ void benders_model_reduced::init_subproblem()
 		y[k] = NumVarArray(env, A2, 0, IloInfinity);
 		lambda[k] = NumVarArray(env, V, -IloInfinity, IloInfinity);
 		tx[k] = NumVarArray(env, A1, 0, IloInfinity);
-
-		LOOP(a, A2) {
-			SRC_DST_FROM_A2(prob, a);
-			char name[50];
-			sprintf(name, "y[%d,%d->%d]", k, src, dst);
-			y[k][a].setName(name);
-		}
-
-		LOOP(i, V) {
-			char name[50];
-			sprintf(name, "lambda[%d,%d]", k, i);
-			lambda[k][i].setName(name);
-		}
-
-		LOOP(a, A1) {
-			SRC_DST_FROM_A1(prob, a);
-			char name[50];
-			sprintf(name, "tx[%d,%d->%d]", k, src, dst);
-			tx[k][a].setName(name);
-		}
-	}
-
-	LOOP(a, A1) {
-		SRC_DST_FROM_A1(prob, a);
-		char name[50];
-		sprintf(name, "t[%d->%d]", src, dst);
-		t[a].setName(name);
 	}
 
 	// SUBPROBLEM 1

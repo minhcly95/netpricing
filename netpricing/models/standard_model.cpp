@@ -1,6 +1,7 @@
 #include "standard_model.h"
 
 #include "../macros.h"
+#include "../utilities/set_var_name.h"
 #include "model_utils.h"
 
 #include <map>
@@ -28,6 +29,8 @@ standard_model::standard_model(IloEnv& env, const problem& _prob) : model_cplex(
 		lambda[k] = NumVarArray(env, V, -IloInfinity, IloInfinity);
 		tx[k] = NumVarArray(env, A1, 0, IloInfinity);
 	}
+
+	SET_VAR_NAMES(*this, x, y, t, tx, lambda);
 
 	// z is used to reference x and y
 	LOOP(a1, A1) {

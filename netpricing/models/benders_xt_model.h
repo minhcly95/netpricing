@@ -50,8 +50,6 @@ struct benders_xt_model : public model_with_callback, public model_single {
 	void init_subproblem();
 	void update_subproblem(const NumMatrix& xvals, const NumArray& tvals);
 
-	void init_variable_name();
-
 	void update_const_val_map(int k);
 
 	void separate(const NumMatrix& xvals, const NumArray& tvals, RangeArray& cuts);

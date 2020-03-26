@@ -1,6 +1,7 @@
 #include "benders_xt_model.h"
 
 #include "../macros.h"
+#include "../utilities/set_var_name.h"
 #include "model_utils.h"
 #include <iostream>
 #include <sstream>
@@ -119,7 +120,7 @@ benders_xt_model::benders_xt_model(IloEnv& env, const problem& _prob) :
 	}
 
 	// Variable names
-	init_variable_name();
+	SET_VAR_NAMES(*this, x, y, t, tx, lambda);
 }
 
 void benders_xt_model::add_valid_inequalities() {
@@ -258,44 +259,6 @@ void benders_xt_model::update_subproblem(const NumMatrix& xvals, const NumArray&
 		equal_obj[k].setBounds(rhs, rhs);
 	}
 
-}
-
-void benders_xt_model::init_variable_name() {
-	LOOP(k, K) {
-		LOOP(a, A1) {
-			SRC_DST_FROM_A1(prob, a);
-			char name[50];
-			sprintf(name, "x[%d,%d->%d]", k, src, dst);
-			x[k][a].setName(name);
-		}
-
-		LOOP(a, A2) {
-			SRC_DST_FROM_A2(prob, a);
-			char name[50];
-			sprintf(name, "y[%d,%d->%d]", k, src, dst);
-			y[k][a].setName(name);
-		}
-
-		LOOP(a, A1) {
-			SRC_DST_FROM_A1(prob, a);
-			char name[50];
-			sprintf(name, "tx[%d,%d->%d]", k, src, dst);
-			tx[k][a].setName(name);
-		}
-
-		LOOP(i, V) {
-			char name[50];
-			sprintf(name, "lbd[%d,%d]", k, i);
-			lambda[k][i].setName(name);
-		}
-	}
-
-	LOOP(a, A1) {
-		SRC_DST_FROM_A1(prob, a);
-		char name[50];
-		sprintf(name, "t[%d->%d]", src, dst);
-		t[a].setName(name);
-	}
 }
 
 void benders_xt_model::update_const_val_map(int k) {

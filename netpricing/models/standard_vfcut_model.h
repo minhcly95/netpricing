@@ -29,8 +29,6 @@ struct standard_vfcut_model : public model_with_generic_callbacks, public model_
 
 	standard_vfcut_model(IloEnv& env, const problem& prob);
 
-	void init_variable_name();
-
 	void separate(const NumArray& tvals,
 				  RangeArray& cuts, NumMatrix& xvals, NumMatrix& yvals, IloNum& obj);
 	void separate_inner(const NumArray& tvals,
