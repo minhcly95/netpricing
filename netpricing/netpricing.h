@@ -26,6 +26,7 @@
 #include "models/benders_xy_model.h"
 #include "models/benders_xyt_model.h"
 #include "models/slackbranch_model.h"
+#include "models/compslack_model.h"
 
 #include "models/standard_model_multi.h"
 

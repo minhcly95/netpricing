@@ -31,6 +31,7 @@ add_executable(netpricing
 	"models/benders_xyt_model.cpp"
 	"models/slackbranch_model.cpp"
 	"models/value_func_model.cpp"
+	"models/compslack_model.cpp"
 
 	"heuristics/tolls_heuristic.cpp"
 	
