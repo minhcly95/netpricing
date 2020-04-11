@@ -30,6 +30,8 @@
 
 #include "models/standard_model_multi.h"
 
+#include "hybrid/standard_hmodel.h"
+
 #include "csenum/csenum.h"
 #include "csenum/csenum_excl.h"
 

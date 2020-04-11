@@ -98,6 +98,7 @@ int main(int argc, char* argv[])
 		("csenum-excl", "run complementary slackness enumeration (exclusive branch version)")
 		("compslack", "run complementary slackness model")
 		("multi", "run multi-graph version")
+		("hybrid,H", "run hybrid version")
 		("input,i", po::value<string>(), "input problem from file")
 		("output,o", po::value<string>()->default_value("report.json"), "output report file")
 		("thread,t", po::value<int>()->default_value(DEFAULT_NUM_THREADS), "number of threads")
@@ -208,6 +209,9 @@ int main(int argc, char* argv[])
 		cout << "MULTI-GRAPH version activated" << endl;
 	}
 
+	// Hybrid model
+	bool is_hybrid = vm.count("hybrid") > 0;
+
 	// Run the models
 	IloEnv env;
 	ostringstream report;
@@ -236,10 +240,13 @@ int main(int argc, char* argv[])
 		"  Pre-solved cuts: " << pre_cut << endl;
 
 	if (vm.count("standard")) {
-		report << "STANDARD:" << endl <<
-			(is_multi ?
-			 run_model<standard_model_multi>(env, *prob_multi, "STANDARD MODEL MULTI", conf) :
-			 run_model<standard_model>(env, *prob, "STANDARD MODEL", conf));
+		report << "STANDARD:" << endl;
+		if (is_multi)
+			report << run_model<standard_model_multi>(env, *prob_multi, "STANDARD MODEL MULTI", conf);
+		else if (is_hybrid)
+			report << run_model<standard_hmodel>(env, *prob, "STANDARD HYBRID MODEL", conf);
+		else
+			report << run_model<standard_model>(env, *prob, "STANDARD MODEL", conf);
 	}
 	if (vm.count("goal")) {
 		report << "STANDARD GOAL:" << endl <<

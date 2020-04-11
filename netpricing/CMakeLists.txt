@@ -15,7 +15,8 @@ add_executable(netpricing
 	"problem_generator.cpp"
 	"solution.cpp"
 	"shullpro/s_hull_pro.cpp"
-
+	
+	"models/model_cplex.cpp"
 	"models/model_utils.cpp"
 	"models/standard_model.cpp"
 	"models/standard_goal_model.cpp"
@@ -32,6 +33,11 @@ add_executable(netpricing
 	"models/slackbranch_model.cpp"
 	"models/value_func_model.cpp"
 	"models/compslack_model.cpp"
+
+	"hybrid/base/hybrid_model.cpp"
+	"hybrid/base/formulation.cpp"
+	"hybrid/formulations/standard_formulation.cpp"
+	"hybrid/standard_hmodel.cpp"
 
 	"heuristics/tolls_heuristic.cpp"
 	
