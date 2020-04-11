@@ -6,8 +6,14 @@
 #include <queue>
 #include <tuple>
 #include <set>
+#include <iostream>
 
 using namespace std;
+
+using path = light_graph::path;
+using iipair = light_graph::iipair;
+using toll_set = light_graph::toll_set;
+using toll_list = light_graph::toll_list;
 
 light_graph::light_graph(const problem_base::graph_type& graph) :
 	V(boost::num_vertices(graph)), Eall(), E(V), Er(V),
@@ -43,6 +49,11 @@ light_graph::light_graph(const problem_base::graph_type& graph) :
 light_edge& light_graph::edge(int src, int dst)
 {
 	return E[src].at(dst);
+}
+
+light_edge& light_graph::edge(const iipair& pair)
+{
+	return E[pair.first].at(pair.second);
 }
 
 void light_graph::set_toll_arcs_enabled(bool enabled)
@@ -95,7 +106,33 @@ double light_graph::get_path_cost(const path& p)
 	return sum;
 }
 
-vector<light_graph::path> light_graph::k_shortest_paths(int from, int to, int K, bool toll_free_break)
+toll_set light_graph::get_toll_set(const path& p)
+{
+	toll_set toll_set;
+	for (int i = 0; i < p.size() - 1; i++)
+		if (edge(p[i], p[i + 1]).is_tolled)
+			toll_set.emplace(p[i], p[i + 1]);
+	return toll_set;
+}
+
+toll_list light_graph::get_toll_list(const path& p)
+{
+	toll_list toll_list;
+	for (int i = 0; i < p.size() - 1; i++)
+		if (edge(p[i], p[i + 1]).is_tolled)
+			toll_list.emplace_back(p[i], p[i + 1]);
+	return toll_list;
+}
+
+bool light_graph::is_toll_free(const path& p)
+{
+	for (int i = 0; i < p.size() - 1; i++)
+		if (edge(p[i], p[i + 1]).is_tolled)
+			return false;
+	return true;
+}
+
+vector<path> light_graph::k_shortest_paths(int from, int to, int K, bool toll_free_break)
 {
 	using cppair = std::pair<cost_type, path>;
 
@@ -197,20 +234,16 @@ void light_graph::clear_temp_states()
 	for (auto& edge : Eall) edge.temp_enabled = true;
 }
 
-vector<light_graph::path> light_graph::toll_unique_paths(int from, int to, int k)
+vector<path> light_graph::toll_unique_paths(int from, int to, int k)
 {
 	vector<path> kpaths = k_shortest_paths(from, to, k, true);
 	vector<path> rpaths;
 
-	using odpair = pair<int, int>;
-	set<set<odpair>> visited_sets;
+	set<toll_set> visited_sets;
 
 	for (const path& path : kpaths) {
 		// Get the set of toll arcs
-		set<odpair> toll_set;
-		for (int i = 0; i < path.size() - 1; i++)
-			if (edge(path[i], path[i + 1]).is_tolled)
-				toll_set.emplace(path[i], path[i + 1]);
+		toll_set toll_set = get_toll_set(path);
 
 		// If the toll set is empty, break (because this's the last choice of the commodity)
 		if (toll_set.empty()) {
@@ -228,7 +261,174 @@ vector<light_graph::path> light_graph::toll_unique_paths(int from, int to, int k
 	return rpaths;
 }
 
-std::vector<cost_type> light_graph::price_from_src(int src)
+vector<path> light_graph::bilevel_feasible_paths_yen(int from, int to, int k)
+{
+	vector<path> kpaths = toll_unique_paths(from, to, k);
+	vector<path> rpaths;
+
+	vector<toll_set> visited_sets;
+
+	for (const path& path : kpaths) {
+		// Get the set of toll arcs
+		toll_set toll_set = get_toll_set(path);
+
+		// If the toll set is empty, break (because this's the last choice of the commodity)
+		if (toll_set.empty()) {
+			rpaths.push_back(path);
+			break;
+		}
+
+		// Check if it is superset of any previous set, if so, remove it
+		bool eliminated = std::any_of(visited_sets.begin(), visited_sets.end(),
+									  [&](const auto& s) {
+										  return std::includes(toll_set.begin(), toll_set.end(), s.begin(), s.end());
+									  });
+
+		// Add to visited sets if not eliminated
+		if (!eliminated) {
+			visited_sets.emplace_back(std::move(toll_set));
+			rpaths.push_back(path);
+		}
+	}
+
+	return rpaths;
+}
+
+vector<path> light_graph::bilevel_feasible_paths(int from, int to, int K)
+{
+	// An queue entry: cost (for the heap), path, list of toll arcs
+	using qentry = std::tuple<cost_type, path, vector<iipair>>;
+
+	clear_temp_states();
+
+	// List of shortest paths A
+	vector<qentry> A;
+	vector<path> rpaths;
+
+	// Heap of candidates B
+	std::priority_queue<qentry, vector<qentry>, std::greater<qentry>> B;
+
+	// First shortest path
+	path first_path = shortest_path(from, to);
+	if (!first_path.empty()) {
+		cost_type cost = get_path_cost(first_path);
+		toll_list tlist = get_toll_list(first_path);
+		rpaths.push_back(first_path);
+		A.emplace_back(cost, std::move(first_path), std::move(tlist));
+	}
+	else
+		return vector<path>();
+
+	while (true) {
+		const qentry& last_entry = A.back();
+		cost_type last_cost = std::get<0>(last_entry);
+		const path& last_path = std::get<1>(last_entry);
+		const auto& last_tlist = std::get<2>(last_entry);
+
+		//cout << "entering " << last_tlist << "    " << last_cost << endl;
+
+		// The last path is toll-free path
+		if (last_tlist.empty())
+			break;
+
+		// Look up for root path mismatch
+		vector<bool> root_path_matchable(A.size(), true);
+
+		// For each toll arc in the toll set
+		for (int i = -1; i < (int)(last_tlist.size()) - 1; i++) {
+			// Get the spur node (the end of the previous toll arc or the origin)
+			int spur_node = (i < 0) ? from : last_tlist[i].second;
+
+			// Root path (later total path)
+			auto spur_node_it = std::find(last_path.begin(), last_path.end(), spur_node);
+			path new_path(last_path.begin(), spur_node_it);
+
+			// If i = -1, remove first toll arc in all paths in A
+			if (i < 0) {
+				for (int j = 0; j < A.size(); j++) {
+					const toll_list& tlist = std::get<2>(A[j]);
+					edge(tlist[0]).temp_enabled = false;
+				}
+			}
+			// If another shortest path shares the same sublist of toll arcs up to tlist[i], remove the next toll arc
+			else {
+				for (int j = 0; j < A.size(); j++) {
+					if (!root_path_matchable[j])
+						continue;
+
+					const toll_list& tlist = std::get<2>(A[j]);
+
+					// if root_path_matchable[j] is true, all previous toll arcs of A[j] and new_path are matched
+					if (tlist.size() > i + 1 && tlist[i] == last_tlist[i]) {
+						edge(tlist[i + 1]).temp_enabled = false;
+					}
+					else {
+						root_path_matchable[j] = false;
+					}
+				}
+			}
+
+			// Remove all nodes in the root path except for the spur node
+			for (int node : new_path)
+				if (node != spur_node)
+					temp_enabled_V[node] = false;
+
+			// Calculate the spur path
+			path spur_path = shortest_path(spur_node, to);
+			if (!spur_path.empty()) {
+				new_path.insert(new_path.end(), spur_path.begin(), spur_path.end());
+				cost_type cost = get_path_cost(new_path);
+				toll_list new_tlist = get_toll_list(new_path);
+				//cout << "  adding " << new_tlist << "    " << cost << endl;
+
+				// Duplicated path will be removed when popped
+				B.emplace(cost, std::move(new_path), std::move(new_tlist));
+			}
+
+			// Restore the temp states
+			clear_temp_states();
+		}
+
+		// Break if there are no candidates
+		if (B.empty())
+			break;
+
+		// Move the best candidate to A (remove all duplicates in the process)
+		qentry best_entry = B.top();
+		while (!B.empty() && B.top() == best_entry)
+			B.pop();
+
+		// Check for dominance condition
+		const vector<iipair>& best_tlist = std::get<2>(best_entry);
+		toll_set best_tset(best_tlist.begin(), best_tlist.end());
+		if (all_of(A.begin(), A.end(),
+					[&](const auto& entry) {
+						const vector<iipair>& tlist = std::get<2>(entry);
+						toll_set tset(tlist.begin(), tlist.end());
+						return !std::includes(best_tset.begin(), best_tset.end(), tset.begin(), tset.end());
+					})) {
+			rpaths.push_back(std::get<1>(best_entry));
+			if (rpaths.size() >= K)
+				break;
+		}
+		/*else {
+			cout << "  excluding " << best_tlist << "    " << std::get<0>(best_entry) << endl;
+			auto it = find_if(A.begin(), A.end(),
+					[&](const auto& entry) {
+						const vector<iipair>& tlist = std::get<2>(entry);
+						toll_set tset(tlist.begin(), tlist.end());
+						return std::includes(best_tset.begin(), best_tset.end(), tset.begin(), tset.end());
+					});
+			cout << "    superset of " << std::get<2>(*it) << "    " << std::get<0>(*it) << endl;
+		}*/
+
+		A.emplace_back(std::move(best_entry));
+	}
+
+	return rpaths;
+}
+
+vector<cost_type> light_graph::price_from_src(int src)
 {
 	vector<int> parents;
 	vector<cost_type> distances;
@@ -238,7 +438,7 @@ std::vector<cost_type> light_graph::price_from_src(int src)
 	return distances;
 }
 
-std::vector<cost_type> light_graph::price_to_dst(int dst)
+vector<cost_type> light_graph::price_to_dst(int dst)
 {
 	vector<int> parents;
 	vector<cost_type> distances;

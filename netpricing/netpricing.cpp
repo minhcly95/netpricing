@@ -334,6 +334,11 @@ void run_routine(int index)
 	case 12: light_graph_toll_unique_perftest(); break;
 	case 13: light_graph_price_from_src_acctest(); break;
 	case 14: light_graph_price_to_dst_acctest(); break;
+	case 15: light_graph_bilevel_feasible_yen_acctest(); break;
+	case 16: light_graph_bilevel_feasible_yen_perftest(); break;
+	case 17: light_graph_bilevel_feasible_acctest(); break;
+	case 18: light_graph_bilevel_feasible_perftest(); break;
+	case 19: light_graph_bilevel_feasible_stat(); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;

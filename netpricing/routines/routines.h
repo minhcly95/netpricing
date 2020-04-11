@@ -18,3 +18,8 @@ void light_graph_toll_unique_acctest();
 void light_graph_toll_unique_perftest();
 void light_graph_price_from_src_acctest();
 void light_graph_price_to_dst_acctest();
+void light_graph_bilevel_feasible_yen_acctest();
+void light_graph_bilevel_feasible_yen_perftest();
+void light_graph_bilevel_feasible_acctest();
+void light_graph_bilevel_feasible_perftest();
+void light_graph_bilevel_feasible_stat();
