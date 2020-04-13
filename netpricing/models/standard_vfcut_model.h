@@ -4,7 +4,7 @@
 
 struct problem;
 
-struct standard_vfcut_model : public model_with_generic_callbacks, public model_single {
+struct standard_vfcut_model : public model_with_generic_callback, public model_single {
 	// Variables
 	NumVarMatrix x;
 	NumVarMatrix y;
@@ -37,7 +37,7 @@ struct standard_vfcut_model : public model_with_generic_callbacks, public model_
 	// Inherited via model_with_callback
 	virtual solution get_solution() override;
 	virtual std::string get_report() override;
-	virtual std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> attach_callbacks() override;
+	virtual std::pair<IloCplex::Callback::Function*, ContextId> attach_callback() override;
 };
 
 

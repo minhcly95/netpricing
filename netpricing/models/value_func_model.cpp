@@ -110,7 +110,7 @@ struct value_func_model_callback : public IloCplex::Callback::Function {
 };
 
 value_func_model::value_func_model(IloEnv& env, const problem& _prob) :
-	model_with_generic_callbacks(env), model_single(_prob),
+	model_with_generic_callback(env), model_single(_prob),
 	x(env, K), y(env, K), z(env, K), tx(env, K), t(env, A1, 0, IloInfinity),
 	builder(env, prob, x, y, t, tx), heur_freq(100), pre_cut(0),
 	presolve_time(0), presolve_cut_count(0) {
@@ -231,11 +231,9 @@ std::string value_func_model::get_report()
 	return ss.str();
 }
 
-vector<pair<IloCplex::Callback::Function*, value_func_model::ContextId>> value_func_model::attach_callbacks()
+pair<IloCplex::Callback::Function*, value_func_model::ContextId> value_func_model::attach_callback()
 {
-	return {
-		make_pair(new value_func_model_callback(*this), CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION)
-	};
+	return make_pair(new value_func_model_callback(*this), CPX_CALLBACKCONTEXT_CANDIDATE | CPX_CALLBACKCONTEXT_RELAXATION);
 }
 
 void value_func_model::presolve()

@@ -43,17 +43,17 @@ struct model_with_callback : public model_with_callbacks {
 	virtual std::vector<IloCplex::Callback> attach_callbacks() override;
 };
 
-struct model_with_generic_callbacks : public model_cplex {
+struct model_with_generic_callback : public model_cplex {
 	using ContextId = CPXLONG;
 
-	std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> callbacks;
+	std::pair<IloCplex::Callback::Function*, ContextId> callback;
 
-	model_with_generic_callbacks(IloEnv& env);
+	model_with_generic_callback(IloEnv& env);
 
 	virtual bool solve_impl() override;
 	virtual void end() override;
 
-	virtual std::vector<std::pair<IloCplex::Callback::Function*, ContextId>> attach_callbacks() = 0;
+	virtual std::pair<IloCplex::Callback::Function*, ContextId> attach_callback() = 0;
 };
 
 struct model_with_goal : public model_cplex {

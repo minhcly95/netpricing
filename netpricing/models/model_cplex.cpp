@@ -65,19 +65,18 @@ std::vector<IloCplex::Callback> model_with_callback::attach_callbacks() {
 }
 
 // model_with_generic_callbacks
-model_with_generic_callbacks::model_with_generic_callbacks(IloEnv& env) : model_cplex(env) {}
+model_with_generic_callback::model_with_generic_callback(IloEnv& env) : model_cplex(env) {}
 
-bool model_with_generic_callbacks::solve_impl() {
-	callbacks = attach_callbacks();
-	for (auto& cb : callbacks)
-		cplex.use(cb.first, cb.second);
+bool model_with_generic_callback::solve_impl() {
+	callback = attach_callback();
+	if (callback.first != nullptr)
+		cplex.use(callback.first, callback.second);
 
 	return model_cplex::solve_impl();
 }
 
-void model_with_generic_callbacks::end() {
-	for (auto& cb : callbacks)
-		delete cb.first;
+void model_with_generic_callback::end() {
+	delete callback.first;
 	model_cplex::end();
 }
 

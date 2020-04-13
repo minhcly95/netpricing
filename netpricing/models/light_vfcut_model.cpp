@@ -86,7 +86,7 @@ struct light_vfcut_model_callback : public IloCplex::Callback::Function {
 };
 
 light_vfcut_model::light_vfcut_model(IloEnv& env, const problem& _prob) :
-	model_with_generic_callbacks(env), model_single(_prob), lsolver(prob),
+	model_with_generic_callback(env), model_single(_prob), lsolver(prob),
 	separate_time(0), subprob_time(0), separate_count(0) {
 	// Typedef
 	using graph_type = problem::graph_type;
@@ -313,9 +313,7 @@ std::string light_vfcut_model::get_report()
 	return ss.str();
 }
 
-vector<pair<IloCplex::Callback::Function*, light_vfcut_model::ContextId>> light_vfcut_model::attach_callbacks()
+pair<IloCplex::Callback::Function*, light_vfcut_model::ContextId> light_vfcut_model::attach_callback()
 {
-	return {
-		make_pair(new light_vfcut_model_callback(*this), CPX_CALLBACKCONTEXT_RELAXATION)
-	};
+	return make_pair(new light_vfcut_model_callback(*this), CPX_CALLBACKCONTEXT_RELAXATION);
 }

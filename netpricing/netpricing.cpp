@@ -277,7 +277,11 @@ int main(int argc, char* argv[])
 
 	}
 	if (vm.count("valuefunc")) {
-		report << "VALUEFUNC:" << endl << run_model<value_func_model>(env, *prob, "VALUE FUNC MODEL", conf);
+		report << "VALUEFUNC:" << endl;
+		if (is_hybrid)
+			report << run_model<value_func_hmodel>(env, *prob, "VALUE FUNC HYBRID MODEL", conf);
+		else
+			report << run_model<value_func_model>(env, *prob, "VALUE FUNC MODEL", conf);
 	}
 	if (vm.count("xtbenders")) {
 		report << "XT-BENDERS:" << endl << run_model<benders_xt_model>(env, *prob, "XT BENDERS MODEL", conf);

@@ -37,7 +37,9 @@ add_executable(netpricing
 	"hybrid/base/hybrid_model.cpp"
 	"hybrid/base/formulation.cpp"
 	"hybrid/formulations/standard_formulation.cpp"
+	"hybrid/formulations/value_func_formulation.cpp"
 	"hybrid/standard_hmodel.cpp"
+	"hybrid/value_func_hmodel.cpp"
 
 	"heuristics/tolls_heuristic.cpp"
 	
@@ -57,6 +59,7 @@ add_executable(netpricing
 	"utilities/inverse_solver.cpp"
 	"utilities/vfcut_builder.cpp"
 	"utilities/set_var_name.cpp"
+	"utilities/cplex_compare.cpp"
 
 	"routines/follower_solver_perftest.cpp"
 	"routines/inverse_solver_test.cpp"

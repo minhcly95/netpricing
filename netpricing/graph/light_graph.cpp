@@ -94,13 +94,26 @@ light_graph::path light_graph::shortest_path(int from, int to)
 	return p;
 }
 
-double light_graph::get_path_cost(const path& p)
+double light_graph::get_path_cost(const path& p, bool with_toll)
 {
 	double sum = 0;
 
 	for (int i = 0; i < p.size() - 1; i++) {
 		const auto& edge = this->edge(p[i], p[i + 1]);
-		sum += edge.cost + edge.toll;
+		sum += edge.cost + (with_toll ? edge.toll : 0);
+	}
+
+	return sum;
+}
+
+double light_graph::get_path_toll(const path& p)
+{
+	double sum = 0;
+
+	for (int i = 0; i < p.size() - 1; i++) {
+		const auto& edge = this->edge(p[i], p[i + 1]);
+		if (edge.is_tolled)
+			sum += edge.toll;
 	}
 
 	return sum;

@@ -40,7 +40,8 @@ struct light_graph
 	void clear_toll();
 
 	path shortest_path(int from, int to);
-	double get_path_cost(const path& p);
+	double get_path_cost(const path& p, bool with_toll = true);
+	double get_path_toll(const path& p);
 	toll_set get_toll_set(const path& p);
 	toll_list get_toll_list(const path& p);
 	bool is_toll_free(const path& p);
