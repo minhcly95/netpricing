@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../models/model_cplex.h"
+#include "../../utilities/follower_light_solver.h"
 
 #include <vector>
 
@@ -12,8 +13,15 @@ struct hybrid_model : public model_with_generic_callback, public model_single {
 
 	std::vector<formulation*> all_formulations;
 
+	// Callback variables
 	double cb_time;
-	double cb_count;
+	int cb_count;
+
+	// Heuristic variables
+	double heur_time;
+	int heur_count;
+	int heur_freq;
+	follower_light_solver heur_solver;
 
 	hybrid_model(IloEnv& env, const problem& prob);
 	virtual ~hybrid_model();
@@ -25,5 +33,7 @@ struct hybrid_model : public model_with_generic_callback, public model_single {
 	virtual bool solve_impl() override;
 	virtual solution get_solution() override;
 	virtual std::pair<IloCplex::Callback::Function*, ContextId> attach_callback() override;
+
 	virtual std::string get_report() override;
+	virtual void config(const model_config& conf) override;
 };

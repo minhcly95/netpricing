@@ -2,6 +2,8 @@
 
 #include "../base/formulation.h"
 
+struct light_graph;
+
 struct standard_formulation : public formulation {
 	VarArray x;
 	VarArray y;
@@ -15,5 +17,14 @@ struct standard_formulation : public formulation {
 	RangeArray bilinear2;
 	RangeArray bilinear3;
 
+	light_graph* lgraph;
+
+	virtual ~standard_formulation();
+
 	virtual void formulate_impl() override;
+	virtual std::vector<IloNumVar> get_all_variables() override;
+	virtual IloExpr get_obj_expr() override;
+
+	virtual std::vector<std::pair<IloNumVar, IloNum>> path_to_solution(const NumArray& tvals,
+																  const std::vector<int>& path) override;
 };

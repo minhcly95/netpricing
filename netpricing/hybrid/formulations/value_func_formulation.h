@@ -6,7 +6,7 @@ struct light_graph;
 
 struct value_func_formulation : public formulation {
 	constexpr static double TOLERANCE = 1e-6;
-	constexpr static double TOLL_PREFERANCE = 0.9999;
+	constexpr static double TOLL_PREFERENCE = 0.9999;
 
 	VarArray x;
 	VarArray y;
@@ -22,12 +22,23 @@ struct value_func_formulation : public formulation {
 
 	virtual ~value_func_formulation();
 
+	IloRange get_cut(const std::vector<int>& path);
+
 	virtual void formulate_impl() override;
+	virtual std::vector<IloNumVar> get_all_variables() override;
+	virtual IloExpr get_obj_expr() override;
+
+	virtual std::vector<std::pair<IloNumVar, IloNum>> path_to_solution(const NumArray& tvals,
+																  const std::vector<int>& path) override;
 
 	virtual bool has_callback() override { return true; }
 	virtual void invoke_callback(const IloCplex::Callback::Context& context, const NumArray& tvals) override;
 
-	virtual bool has_callback_solution() override { return true; }
-	virtual std::vector<std::pair<IloNumVar, IloNum>> get_callback_solution(const NumArray& tvals) override;
+	virtual bool has_callback_optimal_path() override { return true; }
+	virtual std::vector<int> get_callback_optimal_path() override;
 	virtual double get_callback_obj() override;
+
+	virtual bool has_heuristic_cut() override { return true; }
+	virtual void post_heuristic_cut(const IloCplex::Callback::Context& context,
+									const std::vector<int>& path) override;
 };

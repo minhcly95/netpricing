@@ -3,9 +3,15 @@
 #include "../base/hybrid_model.h"
 #include "../../macros.h"
 #include "../../utilities/set_var_name.h"
+#include "../../utilities/cplex_compare.h"
+#include "../../graph/light_graph.h"
+
+using namespace std;
 
 void standard_formulation::formulate_impl()
 {
+	lgraph = new light_graph(prob->graph);
+
 	// Variables
 	x = VarArray(env, A1, 0, 1, ILOBOOL);
 	y = VarArray(env, A2, 0, IloInfinity);
@@ -99,4 +105,63 @@ void standard_formulation::formulate_impl()
 	cplex_model.add(bilinear1);
 	cplex_model.add(bilinear2);
 	cplex_model.add(bilinear3);
+}
+
+standard_formulation::~standard_formulation()
+{
+	delete lgraph;
+}
+
+std::vector<IloNumVar> standard_formulation::get_all_variables()
+{
+	std::vector<IloNumVar> vars;
+
+	LOOP(a, A1) vars.push_back(x[a]);
+	LOOP(a, A2) vars.push_back(y[a]);
+	LOOP(i, V) vars.push_back(lambda[i]);
+	LOOP(a, A1) vars.push_back(tx[a]);
+
+	return vars;
+}
+
+IloExpr standard_formulation::get_obj_expr()
+{
+	IloExpr expr(env);
+	LOOP(a, A1) expr.setLinearCoef(tx[a], prob->commodities[k].demand);
+	return expr;
+}
+
+std::vector<std::pair<IloNumVar, IloNum>> standard_formulation::path_to_solution(const NumArray& tvals, const std::vector<int>& path)
+{
+	map<IloNumVar, IloNum> sol;
+
+	LOOP(a, A1) sol.emplace(x[a], 0);
+	LOOP(a, A2) sol.emplace(y[a], 0);
+	LOOP(i, V) sol.emplace(lambda[i], 0);
+	LOOP(a, A1) sol.emplace(tx[a], 0);
+
+	// Set the variables of the edges in path to 1
+	for (int i = 0; i < path.size() - 1; i++) {
+		auto edge = EDGE_FROM_SRC_DST(*prob, path[i], path[i + 1]);
+		bool is_tolled = prob->is_tolled_map[edge];
+		if (is_tolled) {
+			int a1 = EDGE_TO_A1(*prob, edge);
+			sol.at(x[a1]) = 1;
+			sol.at(tx[a1]) = tvals[a1];
+		}
+		else
+			sol.at(y[EDGE_TO_A2(*prob, edge)]) = 1;
+	}
+
+	// Set toll
+	LOOP(a, A1) {
+		SRC_DST_FROM_A1(*prob, a);
+		lgraph->edge(src, dst).toll = tvals[a];
+	}
+
+	// Set lambda to the price to dst
+	auto prices = lgraph->price_to_dst(prob->commodities[k].destination);
+	LOOP(i, V) sol.at(lambda[i]) = prices[i];
+
+	return vector<pair<IloNumVar, IloNum>>(sol.begin(), sol.end());
 }

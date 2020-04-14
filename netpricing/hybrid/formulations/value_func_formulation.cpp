@@ -13,6 +13,39 @@ value_func_formulation::~value_func_formulation()
 	delete lgraph;
 }
 
+IloRange value_func_formulation::get_cut(const std::vector<int>& path)
+{
+	cost_type cost = lgraph->get_path_cost(path, false);
+	light_graph::toll_set tset = lgraph->get_toll_set(path);
+
+	// Cut formulation
+	IloExpr cut_lhs(env);
+	IloNum cut_rhs = 0;
+
+	// Fixed part
+	LOOP(a, A1) {
+		auto edge = A1_TO_EDGE(*prob, a);
+		cost_type cost = prob->cost_map[edge];
+		cut_lhs.setLinearCoef(x[a], cost);
+		cut_lhs.setLinearCoef(tx[a], 1);
+	}
+	LOOP(a, A2) {
+		auto edge = A2_TO_EDGE(*prob, a);
+		cost_type cost = prob->cost_map[edge];
+		cut_lhs.setLinearCoef(y[a], cost);
+	}
+
+	// Path-depending part
+	cut_rhs = cost;
+	for (const auto& pair : tset) {
+		auto edge = EDGE_FROM_SRC_DST(*prob, pair.first, pair.second);
+		int a1 = EDGE_TO_A1(*prob, edge);
+		cut_lhs.setLinearCoef(t[a1], -1);
+	}
+
+	return cut_lhs <= cut_rhs;
+}
+
 void value_func_formulation::formulate_impl()
 {
 	// Prepare the solver
@@ -79,55 +112,25 @@ void value_func_formulation::formulate_impl()
 	cplex_model.add(bilinear3);
 }
 
-void value_func_formulation::invoke_callback(const IloCplex::Callback::Context& context, const NumArray& tvals)
+std::vector<IloNumVar> value_func_formulation::get_all_variables()
 {
-	// Set toll
-	LOOP(a, A1) {
-		SRC_DST_FROM_A1(*prob, a);
-		lgraph->edge(src, dst).toll = tvals[a] * TOLL_PREFERANCE;		// Prefer tolled arcs
-	}
+	std::vector<IloNumVar> vars;
 
-	// Solve
-	cb_path = lgraph->shortest_path(prob->commodities[k].origin, prob->commodities[k].destination);
-	cost_type cost = lgraph->get_path_cost(cb_path, false);
-	light_graph::toll_set tset = lgraph->get_toll_set(cb_path);
+	LOOP(a, A1) vars.push_back(x[a]);
+	LOOP(a, A2) vars.push_back(y[a]);
+	LOOP(a, A1) vars.push_back(tx[a]);
 
-	// Cut formulation
-	IloExpr cut_lhs(env);
-	IloNum cut_rhs = 0;
-
-	// Fixed part
-	LOOP(a, A1) {
-		auto edge = A1_TO_EDGE(*prob, a);
-		cost_type cost = prob->cost_map[edge];
-		cut_lhs.setLinearCoef(x[a], cost);
-		cut_lhs.setLinearCoef(tx[a], 1);
-	}
-	LOOP(a, A2) {
-		auto edge = A2_TO_EDGE(*prob, a);
-		cost_type cost = prob->cost_map[edge];
-		cut_lhs.setLinearCoef(y[a], cost);
-	}
-
-	// Path-depending part
-	cut_rhs = cost;
-	for (const auto& pair : tset) {
-		auto edge = EDGE_FROM_SRC_DST(*prob, pair.first, pair.second);
-		int a1 = EDGE_TO_A1(*prob, edge);
-		cut_lhs.setLinearCoef(t[a1], -1);
-	}
-
-	// Add the cuts if it is violated
-	double lhs_val = context.getCandidateValue(cut_lhs);
-	if (lhs_val > cut_rhs* (1 + TOLERANCE)) {
-		context.rejectCandidate(cut_lhs <= cut_rhs);
-	}
-
-	// Clean up
-	cut_lhs.end();
+	return vars;
 }
 
-vector<pair<IloNumVar, IloNum>> value_func_formulation::get_callback_solution(const NumArray& tvals)
+IloExpr value_func_formulation::get_obj_expr()
+{
+	IloExpr expr(env);
+	LOOP(a, A1) expr.setLinearCoef(tx[a], prob->commodities[k].demand);
+	return expr;
+}
+
+std::vector<std::pair<IloNumVar, IloNum>> value_func_formulation::path_to_solution(const NumArray& tvals, const std::vector<int>& path)
 {
 	map<IloNumVar, IloNum> sol;
 
@@ -135,9 +138,9 @@ vector<pair<IloNumVar, IloNum>> value_func_formulation::get_callback_solution(co
 	LOOP(a, A2) sol.emplace(y[a], 0);
 	LOOP(a, A1) sol.emplace(tx[a], 0);
 
-	// Set the variables of the edges in cb_path to 1
-	for (int i = 0; i < cb_path.size() - 1; i++) {
-		auto edge = EDGE_FROM_SRC_DST(*prob, cb_path[i], cb_path[i + 1]);
+	// Set the variables of the edges in path to 1
+	for (int i = 0; i < path.size() - 1; i++) {
+		auto edge = EDGE_FROM_SRC_DST(*prob, path[i], path[i + 1]);
 		bool is_tolled = prob->is_tolled_map[edge];
 		if (is_tolled) {
 			int a1 = EDGE_TO_A1(*prob, edge);
@@ -151,8 +154,44 @@ vector<pair<IloNumVar, IloNum>> value_func_formulation::get_callback_solution(co
 	return vector<pair<IloNumVar, IloNum>>(sol.begin(), sol.end());
 }
 
+void value_func_formulation::invoke_callback(const IloCplex::Callback::Context& context, const NumArray& tvals)
+{
+	// Set toll
+	LOOP(a, A1) {
+		SRC_DST_FROM_A1(*prob, a);
+		lgraph->edge(src, dst).toll = tvals[a] * TOLL_PREFERENCE;		// Prefer tolled arcs
+	}
+
+	// Solve
+	cb_path = lgraph->shortest_path(prob->commodities[k].origin, prob->commodities[k].destination);
+
+	// Cut formulation
+	IloRange cut = get_cut(cb_path);
+
+	// Add the cuts if it is violated
+	double lhs_val = context.getCandidateValue(cut.getExpr());
+	if (lhs_val > cut.getUB() * (1 + TOLERANCE)) {
+		context.rejectCandidate(cut);
+	}
+
+	// Clean up
+	cut.end();
+}
+
+vector<int> value_func_formulation::get_callback_optimal_path()
+{
+	return cb_path;
+}
+
 double value_func_formulation::get_callback_obj()
 {
-	// Undo toll preferance multiplier
-	return lgraph->get_path_toll(cb_path) * prob->commodities[k].demand / TOLL_PREFERANCE;
+	// Undo toll preference multiplier
+	return lgraph->get_path_toll(cb_path) * prob->commodities[k].demand / TOLL_PREFERENCE;
+}
+
+void value_func_formulation::post_heuristic_cut(const IloCplex::Callback::Context& context, const std::vector<int>& path)
+{
+	IloRange cut = get_cut(path);
+	context.addUserCut(cut, IloCplex::CutManagement::UseCutFilter, false);
+	cut.end();
 }
