@@ -17,6 +17,8 @@ void set_x_name_k(model_single* m, int k, cplex_def::VarArray& x);
 void set_y_name_k(model_single* m, int k, cplex_def::VarArray& y);
 void set_tx_name_k(model_single* m, int k, cplex_def::VarArray& tx);
 void set_lambda_name_k(model_single* m, int k, cplex_def::VarArray& lambda);
+void set_z_name_k(model_single* m, int k, cplex_def::VarArray& z);
+void set_tz_name_k(model_single* m, int k, cplex_def::VarMatrix& tz);
 
 #define GET_MACRO(_1, _2, _3, _4, _5, NAME, ...) NAME
 

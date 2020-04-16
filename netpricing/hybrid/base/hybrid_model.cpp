@@ -36,7 +36,7 @@ struct hybrid_callback : public IloCplex::Callback::Function {
 
 			double obj = 0;
 			for (formulation* f : model.all_formulations) {
-				if (f->has_callback_optimal_path())
+				if (f->has_callback() && f->has_callback_optimal_path())
 					obj += f->get_callback_obj();
 				else {
 					IloExpr expr = f->get_obj_expr();
@@ -55,7 +55,7 @@ struct hybrid_callback : public IloCplex::Callback::Function {
 				// Append sub-solutions
 				for (formulation* f : model.all_formulations) {
 					// Extract directly if f has callback
-					if (f->has_callback_optimal_path()) {
+					if (f->has_callback() && f->has_callback_optimal_path()) {
 						vector<int> opt_path = f->get_callback_optimal_path();
 						auto f_pairs = f->path_to_solution(tvals, opt_path);
 						all_pairs.insert(all_pairs.end(),

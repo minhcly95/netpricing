@@ -82,3 +82,22 @@ void set_lambda_name_k(model_single* m, int k, cplex_def::VarArray& lambda)
 		lambda[i].setName(name);
 	}
 }
+
+void set_z_name_k(model_single* m, int k, cplex_def::VarArray& z)
+{
+	LOOP(p, z.getSize()) {
+		char name[50];
+		sprintf(name, "z[%d,%d]", k, p);
+		z[p].setName(name);
+	}
+}
+
+void set_tz_name_k(model_single* m, int k, cplex_def::VarMatrix& tz)
+{
+	LOOP(p, tz.getSize()) LOOP(a, m->A1) {
+		SRC_DST_FROM_A1(m->prob, a);
+		char name[50];
+		sprintf(name, "tz[%d,%d,%d->%d]", k, p, src, dst);
+		tz[p][a].setName(name);
+	}
+}

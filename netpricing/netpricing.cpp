@@ -83,6 +83,7 @@ int main(int argc, char* argv[])
 	desc.add_options()
 		("help", "display help message")
 		("routine,r", po::value<int>(), "run special routines")
+
 		("standard,s", "run standard model")
 		("vfcut", "run standard model with value function cuts")
 		("lvfcut", "run standard model with value function cuts (light version)")
@@ -97,15 +98,23 @@ int main(int argc, char* argv[])
 		("csenum", "run complementary slackness enumeration")
 		("csenum-excl", "run complementary slackness enumeration (exclusive branch version)")
 		("compslack", "run complementary slackness model")
+		("path-std", "run path model (fallback to standard model)")
+		("path-vf", "run path model (fallback to value function model)")
+
 		("multi", "run multi-graph version")
 		("hybrid,H", "run hybrid version")
+
 		("input,i", po::value<string>(), "input problem from file")
 		("output,o", po::value<string>()->default_value("report.json"), "output report file")
+
 		("thread,t", po::value<int>()->default_value(DEFAULT_NUM_THREADS), "number of threads")
 		("var-select,v", po::value<int>()->default_value(IloCplex::DefaultVarSel), "variable selection strategy")
 		("time,T", po::value<int>()->default_value(0), "time limit (0 = no limit)")
 		("heur-freq,h", po::value<int>()->default_value(-1), "heuristic frequency (-1 = default)")
 		("pre-cut", po::value<int>()->default_value(0), "number of cuts added per commodity pre-solved")
+		("full-mode", po::value<bool>()->default_value(false), "true if all cuts are added presolved, false if generated dynamically")
+		("max-paths", po::value<int>()->default_value(10), "maximum num paths for path hybrid models")
+
 		("nodes,n", po::value<int>()->default_value(10), "number of nodes in the random problem")
 		("arcs,a", po::value<int>()->default_value(20), "number of arcs in the random problem")
 		("commodities,k", po::value<int>()->default_value(5), "number of commodities in the random problem")
@@ -220,6 +229,8 @@ int main(int argc, char* argv[])
 	const int time_limit = vm["time"].as<int>();
 	const int heur_freq = vm["heur-freq"].as<int>();
 	const int pre_cut = vm["pre-cut"].as<int>();
+	const bool full_mode = vm["full-mode"].as<bool>();
+	const int max_paths = vm["max-paths"].as<int>();
 
 	// Configuration
 	config conf = {
@@ -229,7 +240,9 @@ int main(int argc, char* argv[])
 			.var_select = var_select,
 			.time_limit = time_limit,
 			.heur_freq = heur_freq,
-			.pre_cut = pre_cut
+			.pre_cut = pre_cut,
+			.full_mode = full_mode,
+			.max_paths = max_paths
 		}
 	};
 	cout << "Config:" << endl <<
@@ -237,7 +250,9 @@ int main(int argc, char* argv[])
 		"  Variable selection: " << var_select << endl <<
 		"  Time limit: " << time_limit << endl <<
 		"  Heuristic frequency: " << heur_freq << endl <<
-		"  Pre-solved cuts: " << pre_cut << endl;
+		"  Pre-solved cuts: " << pre_cut << endl <<
+		"  Full mode: " << full_mode << endl <<
+		"  Max num paths: " << max_paths << endl;
 
 	if (vm.count("standard")) {
 		report << "STANDARD:" << endl;
@@ -304,6 +319,14 @@ int main(int argc, char* argv[])
 	if (vm.count("compslack")) {
 		report << "COMP SLACK:" << endl <<
 			 run_model<compslack_model>(env, *prob, "COMP SLACK MODEL", conf);
+	}
+	if (vm.count("path-std")) {
+		report << "PATH (STANDARD):" << endl <<
+			run_model<path_standard_hmodel>(env, *prob, "PATH MODEL (STANDARD)", conf);
+	}
+	if (vm.count("path-vf")) {
+		report << "PATH (VALUEFUNC):" << endl <<
+			run_model<path_value_func_hmodel>(env, *prob, "PATH MODEL (VALUEFUNC)", conf);
 	}
 
 	// Print report

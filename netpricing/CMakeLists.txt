@@ -38,8 +38,10 @@ add_executable(netpricing
 	"hybrid/base/formulation.cpp"
 	"hybrid/formulations/standard_formulation.cpp"
 	"hybrid/formulations/value_func_formulation.cpp"
+	"hybrid/formulations/path_formulation.cpp"
 	"hybrid/standard_hmodel.cpp"
 	"hybrid/value_func_hmodel.cpp"
+	"hybrid/path_hmodel.cpp"
 
 	"heuristics/tolls_heuristic.cpp"
 	

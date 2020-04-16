@@ -16,6 +16,8 @@ struct model_config {
 	int time_limit;
 	int heur_freq;
 	int pre_cut;
+	bool full_mode;
+	int max_paths;
 };
 
 struct model_base {
