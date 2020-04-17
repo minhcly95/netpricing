@@ -33,6 +33,7 @@
 #include "hybrid/standard_hmodel.h"
 #include "hybrid/value_func_hmodel.h"
 #include "hybrid/path_hmodel.h"
+#include "hybrid/vfpath_hmodel.h"
 
 #include "csenum/csenum.h"
 #include "csenum/csenum_excl.h"
