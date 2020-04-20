@@ -98,10 +98,13 @@ int main(int argc, char* argv[])
 		("csenum", "run complementary slackness enumeration")
 		("csenum-excl", "run complementary slackness enumeration (exclusive branch version)")
 		("compslack", "run complementary slackness model")
+
 		("path-std", "run path model (fallback to standard model)")
 		("path-vf", "run path model (fallback to value function model)")
 		("vfpath-std", "run vfpath model (fallback to standard model)")
 		("vfpath-vf", "run vfpath model (fallback to value function model)")
+		("fstandard", "run filtered standard model")
+		("fvaluefunc", "run filtered value function model")
 
 		("multi", "run multi-graph version")
 		("hybrid,H", "run hybrid version")
@@ -337,6 +340,14 @@ int main(int argc, char* argv[])
 	if (vm.count("vfpath-vf")) {
 		report << "VFPATH (VALUEFUNC):" << endl <<
 			run_model<vfpath_value_func_hmodel>(env, *prob, "VFPATH MODEL (VALUEFUNC)", conf);
+	}
+	if (vm.count("fstandard")) {
+		report << "FILTERED STANDARD:" << endl <<
+			run_model<filtered_standard_hmodel>(env, *prob, "FILTERED STANDARD MODEL", conf);
+	}
+	if (vm.count("fvaluefunc")) {
+		report << "FILTERED VALUEFUNC:" << endl <<
+			run_model<filtered_value_func_hmodel>(env, *prob, "FILTERED VALUE FUNC MODEL", conf);
 	}
 
 	// Print report

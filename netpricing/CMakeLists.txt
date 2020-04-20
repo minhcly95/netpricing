@@ -44,6 +44,7 @@ add_executable(netpricing
 	"hybrid/value_func_hmodel.cpp"
 	"hybrid/path_hmodel.cpp"
 	"hybrid/vfpath_hmodel.cpp"
+	"hybrid/filtered_hmodel.cpp"
 
 	"heuristics/tolls_heuristic.cpp"
 	
