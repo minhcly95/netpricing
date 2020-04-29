@@ -103,6 +103,8 @@ int main(int argc, char* argv[])
 		("path-vf", "run path model (fallback to value function model)")
 		("vfpath-std", "run vfpath model (fallback to standard model)")
 		("vfpath-vf", "run vfpath model (fallback to value function model)")
+		("didi-std", "run Didi's path model (fallback to standard model)")
+		("didi-vf", "run Didi's path model (fallback to value function model)")
 		("fstandard", "run filtered standard model")
 		("fvaluefunc", "run filtered value function model")
 
@@ -340,6 +342,14 @@ int main(int argc, char* argv[])
 	if (vm.count("vfpath-vf")) {
 		report << "VFPATH (VALUEFUNC):" << endl <<
 			run_model<vfpath_value_func_hmodel>(env, *prob, "VFPATH MODEL (VALUEFUNC)", conf);
+	}
+	if (vm.count("didi-std")) {
+		report << "PATH DIDI (STANDARD):" << endl <<
+			run_model<path_didi_standard_hmodel>(env, *prob, "PATH DIDI MODEL (STANDARD)", conf);
+	}
+	if (vm.count("didi-vf")) {
+		report << "PATH DIDI (VALUEFUNC):" << endl <<
+			run_model<path_didi_value_func_hmodel>(env, *prob, "PATH DIDI MODEL (VALUEFUNC)", conf);
 	}
 	if (vm.count("fstandard")) {
 		report << "FILTERED STANDARD:" << endl <<

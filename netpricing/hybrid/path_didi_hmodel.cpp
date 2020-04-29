@@ -1,7 +1,7 @@
-#include "vfpath_hmodel.h"
+#include "path_didi_hmodel.h"
 
 #include "../macros.h"
-#include "formulations/vfpath_formulation.h"
+#include "formulations/path_didi_formulation.h"
 
 #include "formulations/null_formulation.h"
 #include "formulations/standard_formulation.h"
@@ -10,13 +10,13 @@
 using namespace std;
 
 template <class alternative>
-vfpath_hmodel<alternative>::vfpath_hmodel(IloEnv& env, const problem& prob) :
+path_didi_hmodel<alternative>::path_didi_hmodel(IloEnv& env, const problem& prob) :
 	hybrid_model(env, prob), lgraph(prob.graph)
 {
 }
 
 template <class alternative>
-vector<formulation*> vfpath_hmodel<alternative>::assign_formulations()
+vector<formulation*> path_didi_hmodel<alternative>::assign_formulations()
 {
 	int filtered_count = 0, path_count = 0, alt_count = 0;
 
@@ -30,7 +30,7 @@ vector<formulation*> vfpath_hmodel<alternative>::assign_formulations()
 			filtered_count++;
 		}
 		else if (paths.size() <= max_paths) {
-			all_forms[k] = new vfpath_formulation(paths, full_mode);
+			all_forms[k] = new path_didi_formulation(paths, full_mode);
 			path_count++;
 		}
 		else {
@@ -47,7 +47,7 @@ vector<formulation*> vfpath_hmodel<alternative>::assign_formulations()
 }
 
 template <class alternative>
-void vfpath_hmodel<alternative>::config(const model_config& conf)
+void path_didi_hmodel<alternative>::config(const model_config& conf)
 {
 	hybrid_model::config(conf);
 	full_mode = conf.full_mode;
@@ -57,5 +57,5 @@ void vfpath_hmodel<alternative>::config(const model_config& conf)
 		full_mode = true;
 }
 
-template struct vfpath_hmodel<standard_formulation>;
-template struct vfpath_hmodel<value_func_formulation>;
+template struct path_didi_hmodel<standard_formulation>;
+template struct path_didi_hmodel<value_func_formulation>;

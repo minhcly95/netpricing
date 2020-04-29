@@ -3,6 +3,7 @@
 #include "../macros.h"
 #include "formulations/path_formulation.h"
 
+#include "formulations/null_formulation.h"
 #include "formulations/standard_formulation.h"
 #include "formulations/value_func_formulation.h"
 
@@ -17,14 +18,18 @@ path_hmodel<alternative>::path_hmodel(IloEnv& env, const problem& prob) :
 template <class alternative>
 vector<formulation*> path_hmodel<alternative>::assign_formulations()
 {
-	int path_count = 0, alt_count = 0;
+	int filtered_count = 0, path_count = 0, alt_count = 0;
 
 	std::vector<formulation*> all_forms(K);
 	LOOP(k, K) {
 		auto paths = lgraph.bilevel_feasible_paths(prob.commodities[k].origin,
 												   prob.commodities[k].destination,
 												   max_paths + 1);
-		if (paths.size() <= max_paths) {
+		if (paths.size() <= 1) {
+			all_forms[k] = new null_formulation();
+			filtered_count++;
+		}
+		else if (paths.size() <= max_paths) {
 			all_forms[k] = new path_formulation(paths, full_mode);
 			path_count++;
 		}
@@ -34,6 +39,7 @@ vector<formulation*> path_hmodel<alternative>::assign_formulations()
 		}
 	}
 
+	cout << "FILTERED formulation: " << filtered_count << endl;
 	cout << "PATH formulation: " << path_count << endl;
 	cout << "ALTERNATIVE formulation: " << alt_count << endl;
 
