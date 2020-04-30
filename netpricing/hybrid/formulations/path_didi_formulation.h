@@ -29,6 +29,7 @@ struct path_didi_formulation : public formulation {
 	RangeArray lk_upper;
 	RangeArray lk_lower;
 	IloRange tk_constr;
+	RangeArray tk_upper;
 
 	path_didi_formulation(const std::vector<path>& paths, bool full_mode);
 	virtual ~path_didi_formulation();

@@ -58,7 +58,7 @@ void path_didi_formulation::formulate_impl()
 	LOOP(p, P) sum_z.setLinearCoef(z[p], 1);
 
 	// Upper bound of lk
-	lk_upper = RangeArray(env, A1, -IloInfinity, 0);
+	lk_upper = RangeArray(env, P, -IloInfinity, 0);
 	LOOP(p, P) {
 		lk_upper[p].setUb(null_costs[p]);
 		lk_upper[p].setLinearCoef(lk, 1);
@@ -67,9 +67,12 @@ void path_didi_formulation::formulate_impl()
 	}
 
 	// Lower bound of lk
-	lk_lower = RangeArray(env, A1, 0, IloInfinity);
+	lk_lower = RangeArray(env, P, 0, IloInfinity);
 	LOOP(p, P) {
-		double big_m = 1000;
+		double big_m = null_costs[p] - null_costs[0];
+		for (int a : toll_sets[p])
+			big_m += prob->big_n[a];
+
 		lk_lower[p].setLb(null_costs[p] - big_m);
 		lk_lower[p].setLinearCoef(lk, 1);
 		lk_lower[p].setLinearCoef(z[p], -big_m);
@@ -89,6 +92,21 @@ void path_didi_formulation::formulate_impl()
 	cplex_model.add(lk_upper);
 	cplex_model.add(lk_lower);
 	cplex_model.add(tk_constr);
+
+	// Extra constraints
+	if (full_mode) {
+		double big_m = null_costs.back() - null_costs[0];
+
+		tk_upper = RangeArray(env, P, -IloInfinity, big_m);
+		LOOP(p, P) {
+			tk_upper[p].setLinearCoef(tk, 1);
+			tk_upper[p].setLinearCoef(z[p], big_m);
+			for (int a : toll_sets[p])
+				tk_upper[p].setLinearCoef(t[a], -1);
+		}
+
+		cplex_model.add(tk_upper);
+	}
 }
 
 std::vector<IloNumVar> path_didi_formulation::get_all_variables()

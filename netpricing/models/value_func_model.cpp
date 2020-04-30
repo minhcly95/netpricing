@@ -227,13 +227,15 @@ std::string value_func_model::get_report()
 {
 	ostringstream ss;
 	ss << model_cplex::get_report();
-	ss <<
-		"PRESOLVE: " << presolve_time << " s" <<
-		"    Count " << presolve_cut_count << endl <<
-		"SEP: " << builder.count <<
-		"    Time " << builder.time << " s" <<
-		"    Avg " << (builder.time * 1000 / builder.count) << " ms" <<
-		"    Sub " << (builder.get_sub_time() * 100 / builder.time) << "%" << endl;
+	ss << "PRESOLVE: " << presolve_time << " s" <<
+		"    Count " << presolve_cut_count << endl;
+	if (!relax_only) {
+		ss <<
+			"SEP: " << builder.count <<
+			"    Time " << builder.time << " s" <<
+			"    Avg " << (builder.time * 1000 / builder.count) << " ms" <<
+			"    Sub " << (builder.get_sub_time() * 100 / builder.time) << "%" << endl;
+	}
 
 	return ss.str();
 }
@@ -254,7 +256,7 @@ void value_func_model::presolve()
 		int from = prob.commodities[k].origin;
 		int to = prob.commodities[k].destination;
 
-		vector<vector<int>> paths = builder.solver.lgraph.toll_unique_paths(from, to, pre_cut);
+		vector<vector<int>> paths = builder.solver.lgraph.bilevel_feasible_paths(from, to, pre_cut);
 
 		for (auto& path : paths) {
 			IloRange cut = builder.build_cut(path, k);
