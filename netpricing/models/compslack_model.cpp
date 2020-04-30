@@ -31,6 +31,13 @@ compslack_model::compslack_model(IloEnv& env, const problem& _prob) : model_cple
 
 	SET_VAR_NAMES(*this, x, y, t, lambda);
 
+	cplex_model.add(t);
+	LOOP(k, K) {
+		cplex_model.add(x[k]);
+		cplex_model.add(y[k]);
+		cplex_model.add(lambda[k]);
+	}
+
 	// z is used to reference x and y
 	LOOP(a1, A1) {
 		int a = A1_TO_A(prob, a1);

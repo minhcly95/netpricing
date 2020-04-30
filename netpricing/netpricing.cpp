@@ -57,9 +57,11 @@ string run_model(IloEnv& env, typename model_type::problem_type& prob, string mo
 		env.out() << "Solution value = " << cplex.getObjValue() << endl;*/
 		string report = model.get_report();
 
-		json sol_obj = model.get_solution().get_json(prob);
-		sol_obj["name"] = model_name;
-		conf.sols_obj.push_back(std::move(sol_obj));
+		if (!conf.mconfig.relax_only) {
+			json sol_obj = model.get_solution().get_json(prob);
+			sol_obj["name"] = model_name;
+			conf.sols_obj.push_back(std::move(sol_obj));
+		}
 
 		model.end();
 
@@ -121,6 +123,7 @@ int main(int argc, char* argv[])
 		("pre-cut", po::value<int>()->default_value(0), "number of cuts added per commodity pre-solved")
 		("full-mode", po::value<bool>()->default_value(false), "true if all cuts are added presolved, false if generated dynamically")
 		("max-paths", po::value<int>()->default_value(10), "maximum num paths for path hybrid models")
+		("relax-only", po::value<bool>()->default_value(false), "only solve the relaxation")
 
 		("nodes,n", po::value<int>()->default_value(10), "number of nodes in the random problem")
 		("arcs,a", po::value<int>()->default_value(20), "number of arcs in the random problem")
@@ -238,6 +241,7 @@ int main(int argc, char* argv[])
 	const int pre_cut = vm["pre-cut"].as<int>();
 	const bool full_mode = vm["full-mode"].as<bool>();
 	const int max_paths = vm["max-paths"].as<int>();
+	const bool relax_only = vm["relax-only"].as<bool>();
 
 	// Configuration
 	config conf = {
@@ -249,7 +253,8 @@ int main(int argc, char* argv[])
 			.heur_freq = heur_freq,
 			.pre_cut = pre_cut,
 			.full_mode = full_mode,
-			.max_paths = max_paths
+			.max_paths = max_paths,
+			.relax_only = relax_only
 		}
 	};
 	cout << "Config:" << endl <<
@@ -259,7 +264,8 @@ int main(int argc, char* argv[])
 		"  Heuristic frequency: " << heur_freq << endl <<
 		"  Pre-solved cuts: " << pre_cut << endl <<
 		"  Full mode: " << full_mode << endl <<
-		"  Max num paths: " << max_paths << endl;
+		"  Max num paths: " << max_paths << endl <<
+		"  Relax only: " << relax_only << endl;
 
 	if (vm.count("standard")) {
 		report << "STANDARD:" << endl;

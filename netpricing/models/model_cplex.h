@@ -7,7 +7,12 @@ struct model_cplex : public model_base, public cplex_def {
 	IloModel cplex_model;
 	IloCplex cplex;
 
+	bool relax_only;
+	double relaxation;
+
 	model_cplex(IloEnv& env);
+
+	void solve_relaxation();
 
 	virtual IloCplex get_cplex();
 
@@ -20,6 +25,8 @@ struct model_cplex : public model_base, public cplex_def {
 	virtual double get_best_bound() override;
 	virtual double get_gap() override;
 	virtual int get_step_count() override;
+
+	virtual std::string get_report() override;
 };
 
 struct model_with_callbacks : public model_cplex {

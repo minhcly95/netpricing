@@ -1,8 +1,44 @@
 #include "model_cplex.h"
 
+#include <iostream>
+
+using namespace std;
+
 // model_cplex
-model_cplex::model_cplex(IloEnv& env) : env(env), cplex_model(env), cplex(cplex_model) {
+model_cplex::model_cplex(IloEnv& env) :
+	env(env), cplex_model(env), cplex(cplex_model), relaxation(0), relax_only(false) {
 	cplex.setParam(IloCplex::ClockType, 2);
+}
+
+void model_cplex::solve_relaxation()
+{
+	cout << "Solving relaxation..." << endl;
+	auto start = std::chrono::high_resolution_clock::now();
+
+	IloModel relaxation_model(env);
+	relaxation_model.add(cplex_model);
+
+	// Get all the variables
+	VarArray all_vars(env);
+	for (IloModel::Iterator it(cplex_model); it.ok(); ++it) {
+		if ((*it).isVariable())
+			all_vars.add((*it).asVariable());
+	}
+
+	// Convert all variables to continuous
+	IloConversion conv(env, all_vars, ILOFLOAT);
+	relaxation_model.add(conv);
+
+	// Solve the relaxed model
+	IloCplex relaxation_cplex(relaxation_model);
+	relaxation_cplex.setParam(IloCplex::Threads, 1);
+	relaxation_cplex.setOut(env.getNullStream());
+	relaxation_cplex.solve();
+	relaxation = relaxation_cplex.getObjValue();
+
+	auto end = std::chrono::high_resolution_clock::now();
+	double time = std::chrono::duration<double>(end - start).count();
+	cout << "Solving relaxation done in " << time << " s" << endl << endl;
 }
 
 IloCplex model_cplex::get_cplex() {
@@ -11,7 +47,8 @@ IloCplex model_cplex::get_cplex() {
 
 bool model_cplex::solve_impl() {
 	presolve();
-	return cplex.solve();
+	solve_relaxation();
+	return relax_only ? true : cplex.solve();
 }
 
 void model_cplex::config(const model_config& conf) {
@@ -20,6 +57,7 @@ void model_cplex::config(const model_config& conf) {
 	if (conf.time_limit > 0) {
 		cplex.setParam(IloCplex::Param::TimeLimit, conf.time_limit);
 	}
+	this->relax_only = conf.relax_only;
 }
 
 void model_cplex::end() {
@@ -41,6 +79,14 @@ double model_cplex::get_gap() {
 
 int model_cplex::get_step_count() {
 	return cplex.getNnodes();
+}
+
+std::string model_cplex::get_report() {
+	std::ostringstream ss;
+	if (!relax_only)
+		ss << model_base::get_report();
+	ss << "RELAXATION: " << relaxation << std::endl;
+	return ss.str();
 }
 
 // model_with_callbacks
@@ -84,12 +130,15 @@ void model_with_generic_callback::end() {
 model_with_goal::model_with_goal(IloEnv& env, IloCplex::Goal goal) : model_cplex(env), goal(goal), goal_time(0) {}
 
 bool model_with_goal::solve_impl() {
-	return cplex.solve(goal);
+	presolve();
+	solve_relaxation();
+	return relax_only ? true : cplex.solve(goal);
 }
 
 std::string model_with_goal::get_report() {
 	std::ostringstream ss;
 	ss << model_cplex::get_report();
-	ss << "GOAL: " << goal_time << " s" << std::endl;
+	if (!relax_only)
+		ss << "GOAL: " << goal_time << " s" << std::endl;
 	return ss.str();
 }

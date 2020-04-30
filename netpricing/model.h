@@ -18,6 +18,7 @@ struct model_config {
 	int pre_cut;
 	bool full_mode;
 	int max_paths;
+	bool relax_only;
 };
 
 struct model_base {

@@ -47,6 +47,14 @@ standard_goal_model::standard_goal_model(IloEnv& env, const problem& _prob) :
 
 	SET_VAR_NAMES(*this, x, y, t, tx, lambda);
 
+	cplex_model.add(t);
+	LOOP(k, K) {
+		cplex_model.add(x[k]);
+		cplex_model.add(y[k]);
+		cplex_model.add(lambda[k]);
+		cplex_model.add(tx[k]);
+	}
+
 	// z is used to reference x and y
 	LOOP(a1, A1) {
 		int a = A1_TO_A(prob, a1);

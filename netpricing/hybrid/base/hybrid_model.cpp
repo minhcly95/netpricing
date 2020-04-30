@@ -240,13 +240,15 @@ pair<IloCplex::Callback::Function*, hybrid_model::ContextId> hybrid_model::attac
 string hybrid_model::get_report()
 {
 	ostringstream ss;
-	ss << model_cplex::get_report();
-	ss << "CALLBACK: " << cb_count <<
-		"    Time " << cb_time << " s" <<
-		"    Avg " << (cb_time * 1000 / cb_count) << " ms" << endl;
-	ss << "HEURISTIC: " << heur_count <<
-		"    Time " << heur_time << " s" <<
-		"    Avg " << (heur_time * 1000 / heur_count) << " ms" << endl;
+	ss << model_with_generic_callback::get_report();
+	if (!relax_only) {
+		ss << "CALLBACK: " << cb_count <<
+			"    Time " << cb_time << " s" <<
+			"    Avg " << (cb_time * 1000 / cb_count) << " ms" << endl;
+		ss << "HEURISTIC: " << heur_count <<
+			"    Time " << heur_time << " s" <<
+			"    Avg " << (heur_time * 1000 / heur_count) << " ms" << endl;
+	}
 	return ss.str();
 }
 

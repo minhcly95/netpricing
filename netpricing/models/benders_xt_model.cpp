@@ -94,9 +94,9 @@ benders_xt_model::benders_xt_model(IloEnv& env, const problem& _prob) :
 
 	// Add to model
 	cplex_model.add(obj);
+	cplex_model.add(t);
 	LOOP(k, K) {
 		cplex_model.add(x[k]);
-		cplex_model.add(t);
 		cplex_model.add(tx[k]);
 
 		cplex_model.add(bilinear1[k]);
