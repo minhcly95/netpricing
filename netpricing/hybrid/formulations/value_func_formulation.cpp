@@ -8,6 +8,16 @@
 
 using namespace std;
 
+value_func_formulation::value_func_formulation() :
+	processed_formulation()
+{
+}
+
+value_func_formulation::value_func_formulation(const std::vector<path>& paths) :
+	processed_formulation(paths)
+{
+}
+
 value_func_formulation::~value_func_formulation()
 {
 	delete lgraph;
@@ -15,7 +25,7 @@ value_func_formulation::~value_func_formulation()
 
 IloRange value_func_formulation::get_cut(const std::vector<int>& path)
 {
-	cost_type cost = lgraph->get_path_cost(path, false);
+	cost_type path_cost = lgraph->get_path_cost(path, false);
 	light_graph::toll_set tset = lgraph->get_toll_set(path);
 
 	// Cut formulation
@@ -23,31 +33,33 @@ IloRange value_func_formulation::get_cut(const std::vector<int>& path)
 	IloNum cut_rhs = 0;
 
 	// Fixed part
-	LOOP(a, A1) {
+	LOOP_VALID(a, A1) {
 		auto edge = A1_TO_EDGE(*prob, a);
 		cost_type cost = prob->cost_map[edge];
 		cut_lhs.setLinearCoef(x[a], cost);
 		cut_lhs.setLinearCoef(tx[a], 1);
 	}
-	LOOP(a, A2) {
+	LOOP_VALID(a, A2) {
 		auto edge = A2_TO_EDGE(*prob, a);
 		cost_type cost = prob->cost_map[edge];
 		cut_lhs.setLinearCoef(y[a], cost);
 	}
 
 	// Path-depending part
-	cut_rhs = cost;
+	cut_rhs = path_cost;
 	for (const auto& pair : tset) {
 		auto edge = EDGE_FROM_SRC_DST(*prob, pair.first, pair.second);
 		int a1 = EDGE_TO_A1(*prob, edge);
 		cut_lhs.setLinearCoef(t[a1], -1);
 	}
 
-	return cut_lhs <= cut_rhs;
+	return cut_lhs <= cut_rhs * (1 + TOLERANCE);
 }
 
 void value_func_formulation::formulate_impl()
 {
+	process_graph();
+
 	// Prepare the solver
 	lgraph = new light_graph(prob->graph);
 
@@ -58,12 +70,12 @@ void value_func_formulation::formulate_impl()
 
 	SET_VAR_NAMES_K(model, k, x, y, tx);
 
-	cplex_model.add(x);
-	cplex_model.add(y);
-	cplex_model.add(tx);
+	LOOP_VALID(a, A1) cplex_model.add(x[a]);
+	LOOP_VALID(a, A2) cplex_model.add(y[a]);
+	LOOP_VALID(a, A1) cplex_model.add(tx[a]);
 
 	// Objective
-	LOOP(a, A1) obj.setLinearCoef(tx[a], prob->commodities[k].demand);
+	LOOP_VALID(a, A1) obj.setLinearCoef(tx[a], prob->commodities[k].demand);
 
 	// Flow constraints
 	flow_constr = RangeArray(env, V, 0, 0);
@@ -71,12 +83,12 @@ void value_func_formulation::formulate_impl()
 	flow_constr[prob->commodities[k].destination].setBounds(-1, -1);
 
 	// Flow matrix
-	LOOP(a, A1) {
+	LOOP_VALID(a, A1) {
 		SRC_DST_FROM_A1(*prob, a);
 		flow_constr[src].setLinearCoef(x[a], 1);
 		flow_constr[dst].setLinearCoef(x[a], -1);
 	}
-	LOOP(a, A2) {
+	LOOP_VALID(a, A2) {
 		SRC_DST_FROM_A2(*prob, a);
 		flow_constr[src].setLinearCoef(y[a], 1);
 		flow_constr[dst].setLinearCoef(y[a], -1);
@@ -84,14 +96,14 @@ void value_func_formulation::formulate_impl()
 
 	// Bilinear 1
 	bilinear1 = RangeArray(env, A1, -IloInfinity, 0);
-	LOOP(a, A1) {
+	LOOP_VALID(a, A1) {
 		bilinear1[a].setLinearCoef(tx[a], 1);
 		bilinear1[a].setLinearCoef(x[a], -prob->big_m[k][a]);
 	}
 
 	// Bilinear 2
 	bilinear2 = RangeArray(env, A1);
-	LOOP(a, A1) {
+	LOOP_VALID(a, A1) {
 		bilinear2[a] = IloRange(env, -IloInfinity, prob->big_n[a]);
 		bilinear2[a].setLinearCoef(t[a], 1);
 		bilinear2[a].setLinearCoef(tx[a], -1);
@@ -100,25 +112,25 @@ void value_func_formulation::formulate_impl()
 
 	// Bilinear 3
 	bilinear3 = RangeArray(env, A1, -IloInfinity, 0);
-	LOOP(a, A1) {
+	LOOP_VALID(a, A1) {
 		bilinear3[a].setLinearCoef(t[a], -1);
 		bilinear3[a].setLinearCoef(tx[a], 1);
 	}
 
 	// Add to model
-	cplex_model.add(flow_constr);
-	cplex_model.add(bilinear1);
-	cplex_model.add(bilinear2);
-	cplex_model.add(bilinear3);
+	LOOP_VALID(i, V) cplex_model.add(flow_constr[i]);
+	LOOP_VALID(a, A1) cplex_model.add(bilinear1[a]);
+	LOOP_VALID(a, A1) cplex_model.add(bilinear2[a]);
+	LOOP_VALID(a, A1) cplex_model.add(bilinear3[a]);
 }
 
 std::vector<IloNumVar> value_func_formulation::get_all_variables()
 {
 	std::vector<IloNumVar> vars;
 
-	LOOP(a, A1) vars.push_back(x[a]);
-	LOOP(a, A2) vars.push_back(y[a]);
-	LOOP(a, A1) vars.push_back(tx[a]);
+	LOOP_VALID(a, A1) vars.push_back(x[a]);
+	LOOP_VALID(a, A2) vars.push_back(y[a]);
+	LOOP_VALID(a, A1) vars.push_back(tx[a]);
 
 	return vars;
 }
@@ -126,7 +138,7 @@ std::vector<IloNumVar> value_func_formulation::get_all_variables()
 IloExpr value_func_formulation::get_obj_expr()
 {
 	IloExpr expr(env);
-	LOOP(a, A1) expr.setLinearCoef(tx[a], prob->commodities[k].demand);
+	LOOP_VALID(a, A1) expr.setLinearCoef(tx[a], prob->commodities[k].demand);
 	return expr;
 }
 
@@ -134,9 +146,9 @@ std::vector<std::pair<IloNumVar, IloNum>> value_func_formulation::path_to_soluti
 {
 	map<IloNumVar, IloNum> sol;
 
-	LOOP(a, A1) sol.emplace(x[a], 0);
-	LOOP(a, A2) sol.emplace(y[a], 0);
-	LOOP(a, A1) sol.emplace(tx[a], 0);
+	LOOP_VALID(a, A1) sol.emplace(x[a], 0);
+	LOOP_VALID(a, A2) sol.emplace(y[a], 0);
+	LOOP_VALID(a, A1) sol.emplace(tx[a], 0);
 
 	// Set the variables of the edges in path to 1
 	for (int i = 0; i < path.size() - 1; i++) {
@@ -170,7 +182,7 @@ void value_func_formulation::invoke_callback(const IloCplex::Callback::Context& 
 
 	// Add the cuts if it is violated
 	double lhs_val = context.getCandidateValue(cut.getExpr());
-	if (lhs_val > cut.getUB() * (1 + TOLERANCE)) {
+	if (lhs_val > cut.getUB()) {
 		context.rejectCandidate(cut);
 	}
 

@@ -7,6 +7,8 @@
 
 struct vfcut_builder : public cplex_def
 {
+	constexpr static double TOLERANCE = 1e-6;
+
 	IloEnv env;
 	follower_light_solver solver;
 	problem& prob;

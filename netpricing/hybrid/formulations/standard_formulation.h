@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../base/formulation.h"
+#include "processed_formulation.h"
 
 struct light_graph;
 
-struct standard_formulation : public formulation {
+struct standard_formulation : public processed_formulation {
 	VarArray x;
 	VarArray y;
 	VarArray lambda;
@@ -18,6 +18,11 @@ struct standard_formulation : public formulation {
 	RangeArray bilinear3;
 
 	light_graph* lgraph;
+
+	// Unprocessed version
+	standard_formulation();
+	// Processed version
+	standard_formulation(const std::vector<path>& paths);
 
 	virtual ~standard_formulation();
 

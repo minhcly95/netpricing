@@ -109,6 +109,8 @@ int main(int argc, char* argv[])
 		("didi-vf", "run Didi's path model (fallback to value function model)")
 		("fstandard", "run filtered standard model")
 		("fvaluefunc", "run filtered value function model")
+		("pstandard", "run processed standard model")
+		("pvaluefunc", "run processed value function model")
 
 		("multi", "run multi-graph version")
 		("hybrid,H", "run hybrid version")
@@ -333,6 +335,7 @@ int main(int argc, char* argv[])
 		report << "COMP SLACK:" << endl <<
 			 run_model<compslack_model>(env, *prob, "COMP SLACK MODEL", conf);
 	}
+
 	if (vm.count("path-std")) {
 		report << "PATH (STANDARD):" << endl <<
 			run_model<path_standard_hmodel>(env, *prob, "PATH MODEL (STANDARD)", conf);
@@ -364,6 +367,14 @@ int main(int argc, char* argv[])
 	if (vm.count("fvaluefunc")) {
 		report << "FILTERED VALUEFUNC:" << endl <<
 			run_model<filtered_value_func_hmodel>(env, *prob, "FILTERED VALUE FUNC MODEL", conf);
+	}
+	if (vm.count("pstandard")) {
+		report << "PROCESSED STANDARD:" << endl <<
+			run_model<processed_standard_hmodel>(env, *prob, "PROCESSED STANDARD MODEL", conf);
+	}
+	if (vm.count("pvaluefunc")) {
+		report << "PROCESSED VALUEFUNC:" << endl <<
+			run_model<processed_value_func_hmodel>(env, *prob, "PROCESSED VALUE FUNC MODEL", conf);
 	}
 
 	// Print report

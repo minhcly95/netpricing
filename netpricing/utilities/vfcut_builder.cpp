@@ -90,7 +90,7 @@ IloRange vfcut_builder::build_cut(const vector<int>& path, int k)
 		}
 	}
 
-	return cut_lhs <= cut_rhs;
+	return cut_lhs <= cut_rhs * (1 + TOLERANCE);
 }
 
 double vfcut_builder::get_sub_time() const { return solver.time; }

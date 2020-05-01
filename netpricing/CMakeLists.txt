@@ -36,6 +36,7 @@ add_executable(netpricing
 
 	"hybrid/base/hybrid_model.cpp"
 	"hybrid/base/formulation.cpp"
+	"hybrid/formulations/processed_formulation.cpp"
 	"hybrid/formulations/standard_formulation.cpp"
 	"hybrid/formulations/value_func_formulation.cpp"
 	"hybrid/formulations/path_formulation.cpp"
@@ -47,6 +48,7 @@ add_executable(netpricing
 	"hybrid/vfpath_hmodel.cpp"
 	"hybrid/path_didi_hmodel.cpp"
 	"hybrid/filtered_hmodel.cpp"
+	"hybrid/processed_hmodel.cpp"
 
 	"heuristics/tolls_heuristic.cpp"
 	

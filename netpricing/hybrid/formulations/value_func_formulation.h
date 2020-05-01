@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../base/formulation.h"
+#include "processed_formulation.h"
 
 struct light_graph;
 
-struct value_func_formulation : public formulation {
+struct value_func_formulation : public processed_formulation {
 	constexpr static double TOLERANCE = 1e-6;
 	constexpr static double TOLL_PREFERENCE = 0.9999;
 
@@ -19,6 +19,11 @@ struct value_func_formulation : public formulation {
 
 	light_graph* lgraph;
 	std::vector<int> cb_path;
+
+	// Unprocessed version
+	value_func_formulation();
+	// Processed version
+	value_func_formulation(const std::vector<path>& paths);
 
 	virtual ~value_func_formulation();
 

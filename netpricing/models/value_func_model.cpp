@@ -13,11 +13,10 @@ using namespace boost;
 
 struct value_func_model_callback : public IloCplex::Callback::Function {
 	value_func_model& m;
-	double tol;
 	model_cplex::NumVarArray heur_vars;
 
 	value_func_model_callback(value_func_model& _m)
-		: m(_m), tol(1e-6), heur_vars(m.get_cplex().getEnv()) {
+		: m(_m), heur_vars(m.get_cplex().getEnv()) {
 
 		LOOP(k, m.K) heur_vars.add(m.x[k]);
 		LOOP(k, m.K) heur_vars.add(m.y[k]);
@@ -69,7 +68,7 @@ struct value_func_model_callback : public IloCplex::Callback::Function {
 				double ub = cuts[i].getUB();
 
 				double expr_val = context.getCandidateValue(expr);
-				if (!(lb * (1 - tol) <= expr_val && expr_val <= ub * (1 + tol))) {
+				if (!(lb <= expr_val && expr_val <= ub)) {
 					context.rejectCandidate(cuts);
 					rejected = true;
 					post_heur = false;
