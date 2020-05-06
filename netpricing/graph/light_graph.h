@@ -32,6 +32,7 @@ struct light_graph
 	std::vector<std::map<int, light_edge&>> Er;
 	std::vector<int> temp_enabled_V;
 
+	light_graph(int V);
 	light_graph(const problem_base::graph_type& graph);
 
 	light_edge& edge(int src, int dst);

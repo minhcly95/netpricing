@@ -54,6 +54,6 @@ struct vfpath_formulation : public formulation {
 	virtual double get_callback_obj() override;
 
 	virtual bool has_heuristic_cut() override { return !full_mode; }
-	virtual void post_heuristic_cut(const IloCplex::Callback::Context& context,
+	virtual void post_heuristic_cut(const IloCplex::Callback::Context& context, const NumArray& tvals,
 									const std::vector<int>& path) override;
 };

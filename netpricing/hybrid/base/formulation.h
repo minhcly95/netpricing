@@ -38,6 +38,6 @@ struct formulation : public cplex_def {
 
 	// If this formulation can use a path to generate a cut, this should be implemented
 	virtual bool has_heuristic_cut() { return false; }
-	virtual void post_heuristic_cut(const IloCplex::Callback::Context& context,
+	virtual void post_heuristic_cut(const IloCplex::Callback::Context& context, const NumArray& tvals,
 									const std::vector<int>& path) { }
 };

@@ -2,8 +2,6 @@
 
 #include "processed_formulation.h"
 
-struct light_graph;
-
 struct standard_formulation : public processed_formulation {
 	VarArray x;
 	VarArray y;
@@ -17,12 +15,10 @@ struct standard_formulation : public processed_formulation {
 	RangeArray bilinear2;
 	RangeArray bilinear3;
 
-	light_graph* lgraph;
-
 	// Unprocessed version
 	standard_formulation();
 	// Processed version
-	standard_formulation(const std::vector<path>& paths);
+	standard_formulation(preprocessor* _preproc);
 
 	virtual ~standard_formulation();
 

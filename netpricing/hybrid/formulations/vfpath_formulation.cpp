@@ -189,7 +189,7 @@ double vfpath_formulation::get_callback_obj()
 	return cb_opt_toll * prob->commodities[k].demand;
 }
 
-void vfpath_formulation::post_heuristic_cut(const IloCplex::Callback::Context& context, const std::vector<int>& path)
+void vfpath_formulation::post_heuristic_cut(const IloCplex::Callback::Context& context, const NumArray& tvals, const std::vector<int>& path)
 {
 	// Get the index of the given path
 	auto it = std::find(paths.begin(), paths.end(), path);

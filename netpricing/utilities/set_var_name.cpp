@@ -91,7 +91,6 @@ void set_z_name_k(model_single* m, int k, cplex_def::VarArray& z)
 		z[p].setName(name);
 	}
 }
-
 void set_tz_name_k(model_single* m, int k, cplex_def::VarMatrix& tz)
 {
 	LOOP(p, tz.getSize()) LOOP(a, m->A1) {
@@ -101,14 +100,12 @@ void set_tz_name_k(model_single* m, int k, cplex_def::VarMatrix& tz)
 		tz[p][a].setName(name);
 	}
 }
-
 void set_tk_name_k(model_single* m, int k, IloNumVar& tk)
 {
 	char name[50];
 	sprintf(name, "tk[%d]", k);
 	tk.setName(name);
 }
-
 void set_lk_name_k(model_single* m, int k, IloNumVar& lk)
 {
 	char name[50];

@@ -15,6 +15,11 @@ using iipair = light_graph::iipair;
 using toll_set = light_graph::toll_set;
 using toll_list = light_graph::toll_list;
 
+light_graph::light_graph(int V) :
+	V(V), Eall(), E(V), Er(V),
+	temp_enabled_V(V, true)
+{}
+
 light_graph::light_graph(const problem_base::graph_type& graph) :
 	V(boost::num_vertices(graph)), Eall(), E(V), Er(V),
 	temp_enabled_V(V, true)

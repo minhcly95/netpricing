@@ -4,58 +4,68 @@
 
 using namespace std;
 
-processed_formulation::processed_formulation() :
-	paths(), P(0),
-	removed_V(), removed_A(), removed_A1(), removed_A2()
+processed_formulation::processed_formulation()
 {
+	preproc = new preprocessor();	// Default preprocessor
 }
 
-processed_formulation::processed_formulation(const std::vector<path>& paths) :
-	paths(paths), P(paths.size()),
-	removed_V(), removed_A(), removed_A1(), removed_A2()
+processed_formulation::processed_formulation(preprocessor* _preproc) :
+	preproc(_preproc)
 {
 }
 
 processed_formulation::~processed_formulation()
 {
+	delete preproc;
+	delete lgraph;
 }
 
-void processed_formulation::process_graph()
+void processed_formulation::preprocess()
 {
-	if (P == 0)
-		return;		// Don't process the graph
+	info = preproc->preprocess(*prob);
+	V = info.V.back() + 1;
+	A = info.A.back() + 1;
+	A1 = info.A1.back() + 1;
+	A2 = info.A2.back() + 1;
 
-	using arc = pair<int, int>;
-	set<arc> keep_arcs;
+	init_graph();
+}
 
-	LOOP(i, V) removed_V.insert(i);
+void processed_formulation::init_graph()
+{
+	lgraph = new light_graph(V);
 
-	LOOP(p, P) {
-		path& path = paths[p];
+	problem_base::edge_iterator ei, ei_end;
+	LOOP_INFO(a, A) {
+		auto arc = info.bimap_A.left.at(a);
+		cost_type cost = info.cost_A.at(a);
+		bool is_tolled = info.is_tolled.at(a);
 
-		removed_V.erase(path[0]);
-		for (int i = 0; i < path.size() - 1; i++) {
-			keep_arcs.emplace(path[i], path[i + 1]);
-			removed_V.erase(path[i + 1]);
-		}
+		lgraph->Eall.emplace_back(light_edge{
+			.src = arc.first,
+			.dst = arc.second,
+			.cost = cost,
+			.is_tolled = is_tolled,
+			.toll = 0,
+			.enabled = true,
+			.temp_enabled = true
+								  });
 	}
 
-	LOOP(a, A1) {
-		SRC_DST_FROM_A1(*prob, a);
-		if (keep_arcs.find(make_pair(src, dst)) == keep_arcs.end()) {
-			removed_A1.insert(a);
-			removed_A.insert(A1_TO_A(*prob, a));
-		}
+	for (auto& edge : lgraph->Eall) {
+		lgraph->E[edge.src].emplace(edge.dst, edge);
+		lgraph->Er[edge.dst].emplace(edge.src, edge);
+	}
+}
+
+std::vector<int> processed_formulation::get_path(const NumArray& tvals)
+{
+	// Set toll
+	LOOP_INFO(a, A1) {
+		auto arc = info.bimap_A1.left.at(a);
+		lgraph->edge(arc).toll = tvals[a] * TOLL_PREFERENCE;		// Prefer tolled arcs
 	}
 
-	LOOP(a, A2) {
-		SRC_DST_FROM_A2(*prob, a);
-		if (keep_arcs.find(make_pair(src, dst)) == keep_arcs.end()) {
-			removed_A2.insert(a);
-			removed_A.insert(A2_TO_A(*prob, a));
-		}
-	}
-
-	cout << "Commodity " << k <<
-		": eliminated " << removed_V.size() << " nodes, " << removed_A.size() << " arcs" << endl;
+	// Solve
+	return lgraph->shortest_path(prob->commodities[k].origin, prob->commodities[k].destination);
 }

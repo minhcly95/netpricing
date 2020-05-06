@@ -2,11 +2,8 @@
 
 #include "processed_formulation.h"
 
-struct light_graph;
-
 struct value_func_formulation : public processed_formulation {
 	constexpr static double TOLERANCE = 1e-6;
-	constexpr static double TOLL_PREFERENCE = 0.9999;
 
 	VarArray x;
 	VarArray y;
@@ -17,13 +14,12 @@ struct value_func_formulation : public processed_formulation {
 	RangeArray bilinear2;
 	RangeArray bilinear3;
 
-	light_graph* lgraph;
 	std::vector<int> cb_path;
 
 	// Unprocessed version
 	value_func_formulation();
 	// Processed version
-	value_func_formulation(const std::vector<path>& paths);
+	value_func_formulation(preprocessor* _preproc);
 
 	virtual ~value_func_formulation();
 
@@ -44,6 +40,6 @@ struct value_func_formulation : public processed_formulation {
 	virtual double get_callback_obj() override;
 
 	virtual bool has_heuristic_cut() override { return true; }
-	virtual void post_heuristic_cut(const IloCplex::Callback::Context& context,
+	virtual void post_heuristic_cut(const IloCplex::Callback::Context& context, const NumArray& tvals,
 									const std::vector<int>& path) override;
 };

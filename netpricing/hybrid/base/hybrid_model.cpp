@@ -161,7 +161,7 @@ struct hybrid_callback : public IloCplex::Callback::Function {
 		LOOP(k, model.K) {
 			formulation* f = model.all_formulations[k];
 			if (f->has_heuristic_cut())
-				f->post_heuristic_cut(context, paths[k]);
+				f->post_heuristic_cut(context, tvals, paths[k]);
 		}
 
 		// Clean up

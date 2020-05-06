@@ -6,6 +6,8 @@
 #include "formulations/standard_formulation.h"
 #include "formulations/value_func_formulation.h"
 
+#include "preprocessors/path_preprocessor.h"
+
 using namespace std;
 
 template <class alternative>
@@ -29,7 +31,7 @@ vector<formulation*> processed_hmodel<alternative>::assign_formulations()
 			filtered_count++;
 		}
 		else if (paths.size() <= max_paths) {
-			all_forms[k] = new alternative(paths);
+			all_forms[k] = new alternative(new path_preprocessor(paths));
 			processed_count++;
 		}
 		else {
