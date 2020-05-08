@@ -2,13 +2,8 @@
 
 #include "../base/preprocessor.h"
 
-struct path_preprocessor : preprocessor {
+struct spgm_preprocessor : preprocessor {
 	using path = std::vector<int>;
-
-	int P;
-	std::vector<path> paths;
-
-	path_preprocessor(std::vector<path> paths);
 
 	virtual preprocess_info preprocess(const problem& prob, int k) override;
 };

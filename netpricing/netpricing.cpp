@@ -111,6 +111,8 @@ int main(int argc, char* argv[])
 		("fvaluefunc", "run filtered value function model")
 		("pstandard", "run processed standard model")
 		("pvaluefunc", "run processed value function model")
+		("spgm-std", "run SPGM standard model")
+		("spgm-vf", "run SPGM value function model")
 
 		("multi", "run multi-graph version")
 		("hybrid,H", "run hybrid version")
@@ -123,9 +125,9 @@ int main(int argc, char* argv[])
 		("time,T", po::value<int>()->default_value(0), "time limit (0 = no limit)")
 		("heur-freq,h", po::value<int>()->default_value(-1), "heuristic frequency (-1 = default)")
 		("pre-cut", po::value<int>()->default_value(0), "number of cuts added per commodity pre-solved")
-		("full-mode", po::value<bool>()->default_value(false), "true if all cuts are added presolved, false if generated dynamically")
+		("full-mode,F", "add all cuts to root node")
 		("max-paths", po::value<int>()->default_value(10), "maximum num paths for path hybrid models")
-		("relax-only", po::value<bool>()->default_value(false), "only solve the relaxation")
+		("relax-only,R", "only solve the relaxation")
 
 		("nodes,n", po::value<int>()->default_value(10), "number of nodes in the random problem")
 		("arcs,a", po::value<int>()->default_value(20), "number of arcs in the random problem")
@@ -241,9 +243,9 @@ int main(int argc, char* argv[])
 	const int time_limit = vm["time"].as<int>();
 	const int heur_freq = vm["heur-freq"].as<int>();
 	const int pre_cut = vm["pre-cut"].as<int>();
-	const bool full_mode = vm["full-mode"].as<bool>();
+	const bool full_mode = vm.count("full-mode");
 	const int max_paths = vm["max-paths"].as<int>();
-	const bool relax_only = vm["relax-only"].as<bool>();
+	const bool relax_only = vm.count("relax-only");
 
 	// Configuration
 	config conf = {
@@ -375,6 +377,14 @@ int main(int argc, char* argv[])
 	if (vm.count("pvaluefunc")) {
 		report << "PROCESSED VALUEFUNC:" << endl <<
 			run_model<processed_value_func_hmodel>(env, *prob, "PROCESSED VALUE FUNC MODEL", conf);
+	}
+	if (vm.count("spgm-std")) {
+		report << "SPGM STANDARD:" << endl <<
+			run_model<spgm_standard_hmodel>(env, *prob, "SPGM STANDARD MODEL", conf);
+	}
+	if (vm.count("spgm-vf")) {
+		report << "SPGM VALUEFUNC:" << endl <<
+			run_model<spgm_value_func_hmodel>(env, *prob, "SPGM VALUE FUNC MODEL", conf);
 	}
 
 	// Print report

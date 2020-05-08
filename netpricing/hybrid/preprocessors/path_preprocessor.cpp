@@ -1,8 +1,8 @@
 #include "path_preprocessor.h"
 
-#include <iostream>
+#include "../../problem.h"
 
-#include "../../macros.h"
+#include <iostream>
 
 using namespace std;
 
@@ -11,9 +11,9 @@ path_preprocessor::path_preprocessor(std::vector<path> paths) :
 {
 }
 
-preprocess_info path_preprocessor::preprocess(const problem& prob)
+preprocess_info path_preprocessor::preprocess(const problem& prob, int k)
 {
-	preprocess_info info = preprocessor::preprocess(prob);
+	preprocess_info info = preprocessor::preprocess(prob, k);
 
 	using arc = pair<int, int>;
 	set<arc> keep_A;
@@ -27,47 +27,33 @@ preprocess_info path_preprocessor::preprocess(const problem& prob)
 		}
 	}
 
-	int removed_V = info.V.size() - keep_V.size();
-	int removed_A = info.A.size() - keep_A.size();
-
-	info.V.erase(
-		remove_if(info.V.begin(), info.V.end(),
-				  [&](int i) {
-					  return keep_V.find(i) == keep_V.end();
-				  }),
-		info.V.end());
+	info.V = std::move(keep_V);
 
 	for (auto it = info.A.begin(); it != info.A.end();) {
-		int a = *it;
-		arc arc = info.bimap_A.left.at(a);
-
-		if (keep_A.find(arc) == keep_A.end()) {
-			// Remove
-			bool is_tolled = info.is_tolled.at(a);
-			if (is_tolled) {
-				int a1 = info.a_to_a1(a);
-				info.A1.erase(remove(info.A1.begin(), info.A1.end(), a1), info.A1.end());
-				info.bimap_A1.left.erase(a1);
-				info.cost_A1.erase(a1);
-			}
-			else {
-				int a2 = info.a_to_a2(a);
-				info.A2.erase(remove(info.A2.begin(), info.A2.end(), a2), info.A2.end());
-				info.bimap_A2.left.erase(a2);
-				info.cost_A2.erase(a2);
-			}
-
-			info.bimap_A.left.erase(a);
-			info.cost_A.erase(a);
-			info.is_tolled.erase(a);
-
+		if (!keep_A.count(info.bimap_A.left.at(*it)))
 			it = info.A.erase(it);
-		}
 		else
 			it++;
 	}
 
-	cout << "No paths " << P << ", eliminated " << removed_V << " nodes, " << removed_A << " arcs" << endl;
+	for (auto it = info.A1.begin(); it != info.A1.end();) {
+		if (!keep_A.count(info.bimap_A1.left.at(*it)))
+			it = info.A1.erase(it);
+		else
+			it++;
+	}
+
+	for (auto it = info.A2.begin(); it != info.A2.end();) {
+		if (!keep_A.count(info.bimap_A2.left.at(*it)))
+			it = info.A2.erase(it);
+		else
+			it++;
+	}
+
+	info.reduce(prob.commodities[k].origin, prob.commodities[k].destination);
+
+	cout << "Comm " << k << ": " << P << " paths, " << info.V.size() << " nodes, "
+		<< info.A.size() << " arcs (" << info.A1.size() << " tolled)" << endl;
 
 	return info;
 }

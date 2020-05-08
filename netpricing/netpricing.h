@@ -37,6 +37,7 @@
 #include "hybrid/path_didi_hmodel.h"
 #include "hybrid/filtered_hmodel.h"
 #include "hybrid/processed_hmodel.h"
+#include "hybrid/spgm_hmodel.h"
 
 #include "csenum/csenum.h"
 #include "csenum/csenum_excl.h"

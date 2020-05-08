@@ -21,7 +21,6 @@ struct processed_formulation : public formulation {
 	virtual ~processed_formulation();
 
 	void preprocess();
-	void init_graph();
 
 	std::vector<int> get_path(const NumArray& tvals);
 };
