@@ -179,7 +179,8 @@ preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
 		}
 	}
 
-	info.reduce(orig, dest);
+	info.prune(orig, dest);
+	info.clean();
 
 	cout << "Comm " << k << ": " << info.V.size() << " nodes, "
 		<< info.A.size() << " arcs (" << info.A1.size() << " tolled)" << endl;

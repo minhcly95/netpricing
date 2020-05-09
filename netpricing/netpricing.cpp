@@ -113,6 +113,8 @@ int main(int argc, char* argv[])
 		("pvaluefunc", "run processed value function model")
 		("spgm-std", "run SPGM standard model")
 		("spgm-vf", "run SPGM value function model")
+		("p-spgm-std", "run processed - SPGM standard model")
+		("p-spgm-vf", "run processed - SPGM value function model")
 
 		("multi", "run multi-graph version")
 		("hybrid,H", "run hybrid version")
@@ -126,7 +128,7 @@ int main(int argc, char* argv[])
 		("heur-freq,h", po::value<int>()->default_value(-1), "heuristic frequency (-1 = default)")
 		("pre-cut", po::value<int>()->default_value(0), "number of cuts added per commodity pre-solved")
 		("full-mode,F", "add all cuts to root node")
-		("max-paths", po::value<int>()->default_value(10), "maximum num paths for path hybrid models")
+		("max-paths,P", po::value<int>()->default_value(10), "maximum num paths for path hybrid models")
 		("relax-only,R", "only solve the relaxation")
 
 		("nodes,n", po::value<int>()->default_value(10), "number of nodes in the random problem")
@@ -385,6 +387,14 @@ int main(int argc, char* argv[])
 	if (vm.count("spgm-vf")) {
 		report << "SPGM VALUEFUNC:" << endl <<
 			run_model<spgm_value_func_hmodel>(env, *prob, "SPGM VALUE FUNC MODEL", conf);
+	}
+	if (vm.count("p-spgm-std")) {
+		report << "PROCESSED-SPGM STANDARD:" << endl <<
+			run_model<processed_spgm_standard_hmodel>(env, *prob, "PROCESSED-SPGM STANDARD MODEL", conf);
+	}
+	if (vm.count("p-spgm-vf")) {
+		report << "PROCESSED-SPGM VALUEFUNC:" << endl <<
+			run_model<processed_spgm_value_func_hmodel>(env, *prob, "PROCESSED-SPGM VALUE FUNC MODEL", conf);
 	}
 
 	// Print report

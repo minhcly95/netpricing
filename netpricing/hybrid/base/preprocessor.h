@@ -35,7 +35,9 @@ struct preprocess_info {
 	int src_dst_to_a1(int src, int dst) const;
 	int src_dst_to_a2(int src, int dst) const;
 
+	void prune(int orig, int dest);
 	void reduce(int orig, int dest);
+	void clean();
 
 	light_graph build_graph();
 };

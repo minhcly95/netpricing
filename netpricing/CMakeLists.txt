@@ -55,6 +55,7 @@ add_executable(netpricing
 	"hybrid/filtered_hmodel.cpp"
 	"hybrid/processed_hmodel.cpp"
 	"hybrid/spgm_hmodel.cpp"
+	"hybrid/processed_spgm_hmodel.cpp"
 
 	"heuristics/tolls_heuristic.cpp"
 	

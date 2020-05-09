@@ -51,6 +51,7 @@ preprocess_info path_preprocessor::preprocess(const problem& prob, int k)
 	}
 
 	info.reduce(prob.commodities[k].origin, prob.commodities[k].destination);
+	info.clean();
 
 	cout << "Comm " << k << ": " << P << " paths, " << info.V.size() << " nodes, "
 		<< info.A.size() << " arcs (" << info.A1.size() << " tolled)" << endl;

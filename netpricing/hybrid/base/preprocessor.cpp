@@ -43,7 +43,7 @@ int preprocess_info::src_dst_to_a2(int src, int dst) const
 	return bimap_A2.right.at(make_pair(src, dst));
 }
 
-void preprocess_info::reduce(int orig, int dest)
+void preprocess_info::prune(int orig, int dest)
 {
 	map<int, set<int>> forward;
 	map<int, set<int>> backward;
@@ -88,6 +88,21 @@ void preprocess_info::reduce(int orig, int dest)
 			forward[i].clear();
 			backward[i].clear();
 		}
+	}
+
+}
+
+void preprocess_info::reduce(int orig, int dest)
+{
+	map<int, set<int>> forward;
+	map<int, set<int>> backward;
+
+	for (int a : A) {
+		auto pair = bimap_A.left.at(a);
+		int src = pair.first, dst = pair.second;
+
+		forward[src].insert(dst);
+		backward[dst].insert(src);
 	}
 
 	// Remove chain of toll-free arcs
@@ -171,7 +186,10 @@ void preprocess_info::reduce(int orig, int dest)
 
 		cost_A[root_a] = cost_A2[root_a2] = cost;
 	}
+}
 
+void preprocess_info::clean()
+{
 	// Clear unlisted bimap and map entry
 #define CLEAR_UNLISTED(map, set, var) \
 	for (auto it = map.begin(); it != map.end();) { \
