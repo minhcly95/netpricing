@@ -23,3 +23,5 @@ void light_graph_bilevel_feasible_yen_perftest();
 void light_graph_bilevel_feasible_acctest();
 void light_graph_bilevel_feasible_perftest();
 void light_graph_bilevel_feasible_stat();
+
+void path_vs_spgm_preprocessors_compare();

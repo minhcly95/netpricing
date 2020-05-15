@@ -94,6 +94,8 @@ void preprocess_info::prune(int orig, int dest)
 
 void preprocess_info::reduce(int orig, int dest)
 {
+	clean();
+
 	map<int, set<int>> forward;
 	map<int, set<int>> backward;
 
@@ -183,6 +185,8 @@ void preprocess_info::reduce(int orig, int dest)
 		// Modify the root arc
 		bimap_A.left.replace_data(bimap_A.left.find(root_a), make_pair(start, end));
 		bimap_A2.left.replace_data(bimap_A2.left.find(root_a2), make_pair(start, end));
+
+		auto trace = bimap_A2.left.at(root_a2);
 
 		cost_A[root_a] = cost_A2[root_a2] = cost;
 	}
