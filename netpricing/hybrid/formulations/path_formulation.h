@@ -1,21 +1,12 @@
 #pragma once
 
-#include "../base/formulation.h"
+#include "path_based_formulation.h"
 
 struct light_graph;
 
-struct path_formulation : public formulation {
+struct path_formulation : public path_based_formulation {
 	constexpr static double TOLERANCE = 1e-6;
 	constexpr static double TOLL_PREFERENCE = 0.9999;
-
-	using path = std::vector<int>;
-	using toll_set = std::set<int>;		// Set of indices of toll arcs belonging to the path
-
-	// Path attributes
-	int P;
-	std::vector<path> paths;
-	std::vector<cost_type> null_costs;
-	std::vector<toll_set> toll_sets;
 
 	bool full_mode;
 
@@ -36,7 +27,6 @@ struct path_formulation : public formulation {
 	path_formulation(const std::vector<path>& paths, bool full_mode);
 	virtual ~path_formulation();
 
-	void prepare();
 	IloRange get_cut(int curr_p, int opt_p);
 
 	virtual void formulate_impl() override;

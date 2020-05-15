@@ -115,6 +115,10 @@ int main(int argc, char* argv[])
 		("spgm-vf", "run SPGM value function model")
 		("p-spgm-std", "run processed - SPGM standard model")
 		("p-spgm-vf", "run processed - SPGM value function model")
+		("apstd-std", "run arc-path standard model (fallback to standard model)")
+		("apstd-vf", "run arc-path standard model (fallback to value function model)")
+		("apvf-std", "run arc-path value function model (fallback to standard model)")
+		("apvf-vf", "run arc-path value function model (fallback to value function model)")
 
 		("multi", "run multi-graph version")
 		("hybrid,H", "run hybrid version")
@@ -395,6 +399,22 @@ int main(int argc, char* argv[])
 	if (vm.count("p-spgm-vf")) {
 		report << "PROCESSED-SPGM VALUEFUNC:" << endl <<
 			run_model<processed_spgm_value_func_hmodel>(env, *prob, "PROCESSED-SPGM VALUE FUNC MODEL", conf);
+	}
+	if (vm.count("apstd-std")) {
+		report << "ARC-PATH STANDARD (STANDARD):" << endl <<
+			run_model<apstandard_standard_hmodel>(env, *prob, "ARC-PATH STANDARD (STANDARD) MODEL", conf);
+	}
+	if (vm.count("apstd-vf")) {
+		report << "ARC-PATH STANDARD (VALUEFUNC):" << endl <<
+			run_model<apstandard_valuefunc_hmodel>(env, *prob, "ARC-PATH STANDARD (VALUE FUNC) MODEL", conf);
+	}
+	if (vm.count("apvf-std")) {
+		report << "ARC-PATH VALUEFUNC (STANDARD):" << endl <<
+			run_model<apvaluefunc_standard_hmodel>(env, *prob, "ARC-PATH VALUE FUNC (STANDARD) MODEL", conf);
+	}
+	if (vm.count("apvf-vf")) {
+		report << "ARC-PATH VALUEFUNC (VALUEFUNC):" << endl <<
+			run_model<apvaluefunc_valuefunc_hmodel>(env, *prob, "ARC-PATH VALUE FUNC (VALUE FUNC) MODEL", conf);
 	}
 
 	// Print report

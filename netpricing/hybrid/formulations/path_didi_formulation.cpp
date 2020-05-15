@@ -9,29 +9,12 @@
 using namespace std;
 
 path_didi_formulation::path_didi_formulation(const std::vector<path>& paths, bool full_mode) :
-	paths(paths), P(paths.size()), full_mode(full_mode)
+	path_based_formulation(paths), full_mode(full_mode)
 {
 }
 
 path_didi_formulation::~path_didi_formulation()
 {
-}
-
-void path_didi_formulation::prepare()
-{
-	light_graph lgraph(prob->graph);
-
-	null_costs.resize(P);
-	LOOP(p, P) null_costs[p] = lgraph.get_path_cost(paths[p], false);
-
-	toll_sets.resize(P);
-	LOOP(p, P) {
-		auto toll_arcs = lgraph.get_toll_list(paths[p]);
-		for (const auto& pair : toll_arcs) {
-			auto edge = EDGE_FROM_SRC_DST(*prob, pair.first, pair.second);
-			toll_sets[p].insert(EDGE_TO_A1(*prob, edge));
-		}
-	}
 }
 
 void path_didi_formulation::formulate_impl()
