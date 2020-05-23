@@ -39,13 +39,13 @@ void print_src_dst(P& prob, T& model) {
 	cout << endl;
 }
 
-template <class model_type>
-string run_model(IloEnv& env, typename model_type::problem_type& prob, string model_name, config& conf) {
+template <class model_type, class ... args_type>
+string run_model(IloEnv& env, typename model_type::problem_type& prob, string model_name, config& conf, args_type... args) {
 	//try {
 		cout << "--------------------------------------" << endl;
 		cout << model_name << endl;
 
-		model_type model(env, prob);
+		model_type model(env, prob, args...);
 		model.config(conf.mconfig);
 
 		if (!model.solve()) {
@@ -119,6 +119,8 @@ int main(int argc, char* argv[])
 		("apstd-vf", "run arc-path standard model (fallback to value function model)")
 		("apvf-std", "run arc-path value function model (fallback to standard model)")
 		("apvf-vf", "run arc-path value function model (fallback to value function model)")
+
+		("compose,c", po::value<string>(), "run hybrid composed model")
 
 		("multi", "run multi-graph version")
 		("hybrid,H", "run hybrid version")
@@ -415,6 +417,12 @@ int main(int argc, char* argv[])
 	if (vm.count("apvf-vf")) {
 		report << "ARC-PATH VALUEFUNC (VALUEFUNC):" << endl <<
 			run_model<apvaluefunc_valuefunc_hmodel>(env, *prob, "ARC-PATH VALUE FUNC (VALUE FUNC) MODEL", conf);
+	}
+
+	if (vm.count("compose")) {
+		string code = vm["compose"].as<string>();
+		report << "COMPOSED (" << code << "):" << endl <<
+			run_model<composed_hmodel>(env, *prob, "COMPOSED (" + code + ") MODEL", conf, code);
 	}
 
 	// Print report
