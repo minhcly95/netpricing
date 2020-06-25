@@ -187,10 +187,14 @@ int main(int argc, char* argv[])
 		int k = vm["commodities"].as<int>();
 		float p = vm["toll-proportion"].as<float>();
 		prob = new problem(random_grid_problem(params.width, params.height, k, p, random_engine));
+		int n = num_vertices(prob->graph);
+		int a = num_edges(prob->graph);
 
 		cout << "GRID NETWORK created:" << endl;
 		cout << "    width  = " << params.width << endl;
 		cout << "    height = " << params.height << endl;
+		cout << "    n      = " << n << endl;
+		cout << "    a      = " << a << endl;
 		cout << "    k      = " << k << endl;
 		cout << "    p      = " << p << endl;
 	}
@@ -199,22 +203,25 @@ int main(int argc, char* argv[])
 		int k = vm["commodities"].as<int>();
 		float p = vm["toll-proportion"].as<float>();
 		prob = new problem(random_delaunay_problem(n, k, p, random_engine));
+		int a = num_edges(prob->graph);
 
 		cout << "DELAUNAY NETWORK created:" << endl;
 		cout << "    n = " << n << endl;
+		cout << "    a = " << a << endl;
 		cout << "    k = " << k << endl;
 		cout << "    p = " << p << endl;
 	}
 	else if (vm.count("voronoi")) {
-		int num_seeds = vm["voronoi"].as<int>();
+		int n = vm["voronoi"].as<int>();
 		int k = vm["commodities"].as<int>();
 		float p = vm["toll-proportion"].as<float>();
-		prob = new problem(random_voronoi_problem(num_seeds, k, p, random_engine));
-		int n = num_vertices(prob->graph);
+		prob = new problem(random_voronoi_problem(n, k, p, random_engine));
+		n = num_vertices(prob->graph);
+		int a = num_edges(prob->graph);
 
 		cout << "VORONOI NETWORK created:" << endl;
-		cout << "    num_seeds = " << num_seeds << endl;
 		cout << "    n         = " << n << endl;
+		cout << "    a         = " << a << endl;
 		cout << "    k         = " << k << endl;
 		cout << "    p         = " << p << endl;
 	}

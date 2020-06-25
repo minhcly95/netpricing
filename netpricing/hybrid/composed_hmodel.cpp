@@ -75,9 +75,9 @@ vector<formulation*> composed_hmodel::assign_formulations()
 
 	std::vector<formulation*> all_forms(K);
 	LOOP(k, K) {
-		auto paths = lgraph.bilevel_feasible_paths(prob.commodities[k].origin,
-												   prob.commodities[k].destination,
-												   break_points.back() + 1);
+		auto paths = lgraph.bilevel_feasible_paths_2(prob.commodities[k].origin,
+													 prob.commodities[k].destination,
+													 break_points.back() + 1);
 
 		if (paths.size() <= 1) {
 			all_forms[k] = new null_formulation();

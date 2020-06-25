@@ -85,13 +85,51 @@ problem::graph_type graph_with_random_costs(const input_graph_type& input_graph,
 	return graph;
 }
 
+template<class input_graph_type, class random_engine_type, class cost_dist_type>
+problem::graph_type graph_with_random_symmetric_costs(const input_graph_type& input_graph,
+													  random_engine_type& random_engine,
+													  cost_dist_type cost_dist) {
+	using namespace boost;
+
+	problem::graph_type graph(num_vertices(input_graph));
+	auto cost_map = get(edge_weight, graph);
+
+	typename graph_traits<input_graph_type>::edge_iterator iei, iei_end;
+	for (tie(iei, iei_end) = edges(input_graph); iei != iei_end; ++iei) {
+		int src = source(*iei, input_graph);
+		int dst = target(*iei, input_graph);
+		cost_type cost;
+		if (src <= dst)
+			cost = cost_dist(random_engine);
+		else
+			cost = cost_map[edge(dst, src, graph).first];
+
+		problem::edge_property_type prop;
+		get_property_value(prop, edge_weight) = cost;
+		get_property_value(prop, edge_tolled) = false;
+
+		add_edge(src, dst, prop, graph);
+	}
+
+	return graph;
+}
+
+
 bool is_removable(problem::graph_type& graph,
 				  problem::graph_type& toll_free_graph,
 				  problem::edge_descriptor& edge_desc,
 				  const std::vector<commodity>& commodities);
 
+bool is_symmetrically_removable(problem::graph_type& graph,
+								problem::graph_type& toll_free_graph,
+								problem::edge_descriptor& edge_desc,
+								const std::vector<commodity>& commodities);
+
 std::vector<problem::edge_descriptor> edge_order_by_occurrences(const std::vector<commodity>& commodities,
 																const problem::graph_type& graph);
+
+std::vector<problem::edge_descriptor> edge_symmetric_order_by_occurrences(const std::vector<commodity>& commodities,
+																		  const problem::graph_type& graph);
 
   // ======================== GENERATORS ==========================
 
@@ -151,6 +189,64 @@ template<class input_graph_type,
 }
 
 
+template<class input_graph_type,
+	class random_engine_type = std::default_random_engine,
+	class cost_dist_type = brotcorne_arc_cost_distribution,
+	class demand_dist_type = std::uniform_real_distribution<demand_type>>
+	problem random_symmetric_problem_from_graph(const input_graph_type& input_graph,
+												int num_commodities,
+												float toll_proportion,
+												random_engine_type& random_engine = default_engine,
+												cost_dist_type cost_dist = default_arc_cost_dist,
+												demand_dist_type demand_dist = demand_dist_type(1, 100))
+{
+	using namespace std;
+	using namespace boost;
+
+	// Commodities
+	vector<commodity> commodities = random_commodities(num_vertices(input_graph), num_commodities, random_engine, demand_dist);
+
+	// Building a graph with costs
+	problem::graph_type graph = graph_with_random_symmetric_costs(input_graph, random_engine, cost_dist);
+
+	// Order the edges by occurrences in shortest paths (most frequent at back)
+	vector<problem::edge_descriptor> candidates = edge_symmetric_order_by_occurrences(commodities, graph);
+
+	// Toll free graph to check reachability
+	problem::graph_type toll_free_graph(graph);
+
+	// Target number of tolled edges
+	int target_tolled = round(toll_proportion * candidates.size());
+	int num_tolled = 0;
+	bool shuffled = false;
+
+	auto tolled_map = get(edge_tolled, graph);
+	auto cost_map = get(edge_weight, graph);
+
+	while (num_tolled < target_tolled && candidates.size() > 0) {
+		auto edge = candidates.back();
+		int src = source(edge, graph);
+		int dst = target(edge, graph);
+		candidates.pop_back();
+
+		// If edge is removable, set it as tolled
+		if (is_symmetrically_removable(graph, toll_free_graph, edge, commodities)) {
+			problem::edge_descriptor sym_edge = boost::edge(dst, src, graph).first;
+			tolled_map[sym_edge] = tolled_map[edge] = true;
+			cost_map[sym_edge] = cost_map[edge] = cost_map[edge] / 2;
+			num_tolled += 1;
+		}
+
+		// If 2/3 target reached, shuffle the candidate set
+		if (!shuffled && num_tolled * 3 >= target_tolled * 2) {
+			shuffle(candidates.begin(), candidates.end(), random_engine);
+			shuffled = true;
+		}
+	}
+
+	return problem(graph, std::move(commodities));
+}
+
 template<class random_engine_type = std::default_random_engine>
 boost::adjacency_list<> random_graph(int num_verts, int num_edges,
 									 random_engine_type& random_engine = default_engine) {
@@ -202,7 +298,7 @@ boost::adjacency_list<> grid_graph(int width, int height);
 
 RANDOM_PROBLEM(random_grid_problem, int width, int height) {
 	auto graph = grid_graph(width, height);
-	return random_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
+	return random_symmetric_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
 }
 
 bool pointSortPredicate(const Shx& a, const Shx& b);
@@ -289,10 +385,10 @@ boost::adjacency_list<> voronoi_graph(int num_seeds,
 
 RANDOM_PROBLEM(random_delaunay_problem, int num_points) {
 	auto graph = delaunay_graph(num_points, random_engine);
-	return random_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
+	return random_symmetric_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
 }
 
-RANDOM_PROBLEM(random_voronoi_problem, int num_seeds) {
-	auto graph = voronoi_graph(num_seeds, random_engine);
-	return random_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
+RANDOM_PROBLEM(random_voronoi_problem, int num_points) {
+	auto graph = voronoi_graph((num_points / 2) + 1, random_engine);
+	return random_symmetric_problem_from_graph(graph, num_commodities, toll_proportion, random_engine, cost_dist, demand_dist);
 }
