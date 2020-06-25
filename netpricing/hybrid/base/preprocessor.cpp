@@ -235,9 +235,10 @@ light_graph preprocess_info::build_graph()
 								 });
 	}
 
-	for (auto& edge : lgraph.Eall) {
-		lgraph.E[edge.src].emplace(edge.dst, edge);
-		lgraph.Er[edge.dst].emplace(edge.src, edge);
+	LOOP(a, lgraph.Eall.size()) {
+		auto& edge = lgraph.Eall[a];
+		lgraph.E[edge.src].emplace(edge.dst, a);
+		lgraph.Er[edge.dst].emplace(edge.src, a);
 	}
 
 	return lgraph;

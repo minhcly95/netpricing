@@ -470,6 +470,10 @@ void run_routine(int index)
 	case 18: light_graph_bilevel_feasible_perftest(); break;
 	case 19: light_graph_bilevel_feasible_stat(); break;
 	case 20: path_vs_spgm_preprocessors_compare(); break;
+	case 21: light_graph_bilevel_feasible_2_acctest(); break;
+	case 22: light_graph_bilevel_feasible_2_perftest(); break;
+	case 23: light_graph_bilevel_feasible_3_acctest(); break;
+	case 24: light_graph_bilevel_feasible_3_perftest(); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;

@@ -1,4 +1,5 @@
 #include "../graph/light_graph.h"
+#include "../graph/cplex_graph.h"
 #include "../problem_generator.h"
 
 #include <chrono>
@@ -720,4 +721,352 @@ void light_graph_bilevel_feasible_stat() {
 				cout << MAX_PATHS + 1 << endl;
 		}
 	}
+}
+
+void light_graph_bilevel_feasible_2_acctest() {
+	using path = vector<int>;
+
+	cout << "Light graph Bilevel feasible v2 accuracy test..." << endl;
+
+	const int SAMPLES = 100;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<light_graph> lgraphs;
+	vector<int> froms, tos;
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(5, 12, 1, 0.2, random_engine);
+		lgraphs.emplace_back(prob.graph);
+		froms.push_back(prob.commodities[0].origin);
+		tos.push_back(prob.commodities[0].destination);
+	}
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		vector<path> paths_v1 = lgraph.bilevel_feasible_paths(from, to, 500);
+		vector<path> paths_v2 = lgraph.bilevel_feasible_paths_2(from, to, 500);
+
+		// Verify that the costs are in ascending order
+		cost_type last_cost = lgraph.get_path_cost(paths_v2[0]);
+		for (int j = 1; j < paths_v2.size(); j++) {
+			cost_type cost = lgraph.get_path_cost(paths_v2[j]);
+			if (cost - last_cost < -1e-3) {
+				cerr << "Costs not in ascending order (" << cost << " < " << last_cost << ")" << endl;
+				break;
+			}
+			last_cost = cost;
+		}
+
+		// Verify that the toll sets are bilevel feasible
+		using iipair = pair<int, int>;
+		vector<set<iipair>> all_sets;
+		for (const path& path : paths_v2) {
+			// Get the set of toll arcs
+			auto tset = lgraph.get_toll_set(path);
+
+			// Check if it is not a superset of any previous set
+			if (std::any_of(all_sets.begin(), all_sets.end(),
+							[&](const auto& s) {
+								return std::includes(tset.begin(), tset.end(), s.begin(), s.end());
+							})) {
+				cerr << "Toll set is not bilevel feasible" << endl;
+				break;
+			}
+			else {
+				all_sets.emplace_back(std::move(tset));
+			}
+		}
+
+		// Verify the two lists are the same
+		if (paths_v1 != paths_v2) {
+			cerr << "Version 1:" << endl;
+			for (const path& p : paths_v1) {
+				auto tlist = lgraph.get_toll_list(p);
+				cost_type cost = lgraph.get_path_cost(p);
+				cerr << "  " << tlist << "    " << cost << endl;
+			}
+			cerr << "Version 2:" << endl;
+			for (const path& p : paths_v2) {
+				auto tlist = lgraph.get_toll_list(p);
+				cost_type cost = lgraph.get_path_cost(p);
+				cerr << "  " << tlist << "    " << cost << endl;
+			}
+			cerr << "List of bilevel feasible paths are not the same" << endl;
+			return;
+		}
+	}
+
+	cout << "Light graph Bilevel feasible v2 produced accurate results" << endl;
+}
+
+void light_graph_bilevel_feasible_2_perftest() {
+	using path = vector<int>;
+
+	cout << "Light graph Bilevel feasible v2 (12 x 12 grid) performance test..." << endl;
+
+	const int SAMPLES = 100;
+	const int REPEAT = 1;
+	const int TOTAL = SAMPLES * REPEAT;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<light_graph> lgraphs;
+	vector<int> froms, tos;
+	vector<int> sizes1(SAMPLES);
+	vector<int> sizes2(SAMPLES);
+	vector<int> sizes2u(SAMPLES);
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(12, 12, 1, 0.2, random_engine);
+		lgraphs.emplace_back(prob.graph);
+		froms.push_back(prob.commodities[0].origin);
+		tos.push_back(prob.commodities[0].destination);
+	}
+
+	auto start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.bilevel_feasible_paths(from, to, 200);
+			if (j == 0)
+				sizes1[i] = ps.size();
+		}
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	auto time = chrono::duration<double>(end - start).count();
+
+	cout << "Version 1 (max 200): " << time * 1000 / TOTAL << " ms" << endl;
+
+	start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.bilevel_feasible_paths_2(from, to, 1000);
+			if (j == 0)
+				sizes2[i] = ps.size();
+		}
+	}
+
+	end = chrono::high_resolution_clock::now();
+	time = chrono::duration<double>(end - start).count();
+
+	cout << "Version 2 (max 1000): " << time * 1000 / TOTAL << " ms" << endl;
+
+	start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.bilevel_feasible_paths_2(from, to, 1000, false);
+			if (j == 0)
+				sizes2u[i] = ps.size();
+		}
+	}
+
+	end = chrono::high_resolution_clock::now();
+	time = chrono::duration<double>(end - start).count();
+
+	cout << "Version 2u (max 1000): " << time * 1000 / TOTAL << " ms" << endl;
+
+	cout << "Average num paths 1: " << std::accumulate(sizes1.begin(), sizes1.end(), 0) / SAMPLES << endl;
+	cout << "Average num paths 2: " << std::accumulate(sizes2.begin(), sizes2.end(), 0) / SAMPLES << endl;
+	cout << "Average num paths 2u: " << std::accumulate(sizes2u.begin(), sizes2u.end(), 0) / SAMPLES << endl;
+}
+
+void light_graph_bilevel_feasible_3_acctest() {
+	using path = vector<int>;
+
+	cout << "Light graph Bilevel feasible v3 accuracy test..." << endl;
+
+	const int SAMPLES = 100;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<cplex_graph> lgraphs;
+	vector<int> froms, tos;
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(5, 12, 1, 0.2, random_engine);
+		lgraphs.emplace_back(prob.graph);
+		froms.push_back(prob.commodities[0].origin);
+		tos.push_back(prob.commodities[0].destination);
+	}
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		vector<path> paths_v2 = lgraph.bilevel_feasible_paths_2(from, to, 500);
+		vector<path> paths_v3 = lgraph.bilevel_feasible_paths_3(from, to, 500);
+
+		// Verify that the costs are in ascending order
+		cost_type last_cost = lgraph.get_path_cost(paths_v3[0]);
+		for (int j = 1; j < paths_v3.size(); j++) {
+			cost_type cost = lgraph.get_path_cost(paths_v3[j]);
+			if (cost - last_cost < -1e-3) {
+				cerr << "Costs not in ascending order (" << cost << " < " << last_cost << ")" << endl;
+				break;
+			}
+			last_cost = cost;
+		}
+
+		// Verify that the toll sets are bilevel feasible
+		using iipair = pair<int, int>;
+		vector<set<iipair>> all_sets;
+		for (const path& path : paths_v3) {
+			// Get the set of toll arcs
+			auto tset = lgraph.get_toll_set(path);
+
+			// Check if it is not a superset of any previous set
+			if (std::any_of(all_sets.begin(), all_sets.end(),
+							[&](const auto& s) {
+								return std::includes(tset.begin(), tset.end(), s.begin(), s.end());
+							})) {
+				cerr << "Toll set is not bilevel feasible" << endl;
+				break;
+			}
+			else {
+				all_sets.emplace_back(std::move(tset));
+			}
+		}
+
+		// Verify the two lists are the same
+		if (paths_v2 != paths_v3) {
+			cerr << "Version 2:" << endl;
+			for (const path& p : paths_v2) {
+				auto tlist = lgraph.get_toll_list(p);
+				cost_type cost = lgraph.get_path_cost(p);
+				cerr << "  " << tlist << "    " << cost << endl;
+			}
+			cerr << "Version 3:" << endl;
+			for (const path& p : paths_v3) {
+				auto tlist = lgraph.get_toll_list(p);
+				cost_type cost = lgraph.get_path_cost(p);
+				cerr << "  " << tlist << "    " << cost << endl;
+			}
+			cerr << "List of bilevel feasible paths are not the same" << endl;
+			return;
+		}
+	}
+
+	cout << "Light graph Bilevel feasible v3 produced accurate results" << endl;
+}
+
+void light_graph_bilevel_feasible_3_perftest() {
+	using path = vector<int>;
+
+	cout << "Light graph Bilevel feasible v3 (12 x 12 grid) performance test..." << endl;
+
+	const int SAMPLES = 100;
+	const int REPEAT = 1;
+	const int TOTAL = SAMPLES * REPEAT;
+
+	auto seed = chrono::high_resolution_clock::now().time_since_epoch().count();
+	auto random_engine = default_random_engine(seed);
+
+	vector<cplex_graph> lgraphs;
+	vector<int> froms, tos;
+	vector<int> sizes2(SAMPLES);
+	vector<int> sizes2u(SAMPLES);
+	vector<int> sizes3(SAMPLES);
+	vector<int> sizes3u(SAMPLES);
+
+	LOOP(i, SAMPLES) {
+		problem prob = random_grid_problem(12, 12, 1, 0.2, random_engine);
+		lgraphs.emplace_back(prob.graph);
+		froms.push_back(prob.commodities[0].origin);
+		tos.push_back(prob.commodities[0].destination);
+	}
+
+	auto start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.bilevel_feasible_paths_2(from, to, 1000);
+			if (j == 0)
+				sizes2[i] = ps.size();
+		}
+	}
+
+	auto end = chrono::high_resolution_clock::now();
+	auto time = chrono::duration<double>(end - start).count();
+
+	cout << "Version 2 (max 1000): " << time * 1000 / TOTAL << " ms" << endl;
+
+	start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.bilevel_feasible_paths_2(from, to, 1000, false);
+			if (j == 0)
+				sizes2u[i] = ps.size();
+		}
+	}
+
+	end = chrono::high_resolution_clock::now();
+	time = chrono::duration<double>(end - start).count();
+
+	cout << "Version 2u (max 1000): " << time * 1000 / TOTAL << " ms" << endl;
+
+	start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.bilevel_feasible_paths_3(from, to, 1000);
+			if (j == 0)
+				sizes3[i] = ps.size();
+		}
+	}
+
+	end = chrono::high_resolution_clock::now();
+	time = chrono::duration<double>(end - start).count();
+
+	cout << "Version 3 (max 1000): " << time * 1000 / TOTAL << " ms" << endl;
+
+	start = chrono::high_resolution_clock::now();
+
+	LOOP(i, SAMPLES) {
+		int from = froms[i], to = tos[i];
+		auto& lgraph = lgraphs[i];
+
+		LOOP(j, REPEAT) {
+			vector<path> ps = lgraph.bilevel_feasible_paths_3(from, to, 1000, false);
+			if (j == 0)
+				sizes3u[i] = ps.size();
+		}
+	}
+
+	end = chrono::high_resolution_clock::now();
+	time = chrono::duration<double>(end - start).count();
+
+	cout << "Version 3u (max 1000): " << time * 1000 / TOTAL << " ms" << endl;
+
+	cout << "Average num paths 2: " << std::accumulate(sizes2.begin(), sizes2.end(), 0) / SAMPLES << endl;
+	cout << "Average num paths 2u: " << std::accumulate(sizes2u.begin(), sizes2u.end(), 0) / SAMPLES << endl;
+	cout << "Average num paths 3: " << std::accumulate(sizes3.begin(), sizes3.end(), 0) / SAMPLES << endl;
+	cout << "Average num paths 3u: " << std::accumulate(sizes3u.begin(), sizes3u.end(), 0) / SAMPLES << endl;
 }

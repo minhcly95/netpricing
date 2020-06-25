@@ -41,7 +41,7 @@ void csenum_solver::clear_primal_state_impl()
 	// Enable all edges in primal graph
 	LOOP(k, K) LOOP(i, V) {
 		for (auto& pair : primal_lgraphs[k].E[i]) {
-			pair.second.enabled = true;
+			primal_lgraphs[k].Eall[pair.second].enabled = true;
 		}
 	}
 }

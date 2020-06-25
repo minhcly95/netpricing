@@ -89,7 +89,9 @@ add_executable(netpricing
 	"routines/light_graph_test.cpp"
 	"routines/preprocessing_test.cpp"
 
-	"graph/light_graph.cpp")
+	"graph/light_graph.cpp"
+	"graph/light_graph_enum.cpp"
+	"graph/cplex_graph.cpp")
 
 target_link_libraries(netpricing
 	-lilocplex
