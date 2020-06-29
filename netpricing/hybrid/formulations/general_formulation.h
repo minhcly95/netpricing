@@ -17,11 +17,16 @@ struct general_formulation : public formulation {
 		STRONG_DUAL = false,
 		COMP_SLACK = true
 	};
+	enum linearization_method : bool {
+		DIRECT = false,
+		SUBSTITUTION = true
+	};
 
 	// SWITCHES
 	space primal_space;
 	space dual_space;
 	opt_condition opt_cond;
+	linearization_method linearization;
 
 	// VARIABLES
 	VarArray x;			// Primal Arc
@@ -31,8 +36,8 @@ struct general_formulation : public formulation {
 	VarArray lambda;	// Dual Arc
 	IloNumVar lk;		// Dual Path
 
-	VarArray tx;		// Strong duality
-	IloNumVar tk;		// Complementary slackness
+	VarArray tx;		// Direct linearization
+	IloNumVar tk;		// Strong duality substitution linearization
 
 	// CONSTRAINTS
 	RangeArray flow_constr;		// Primal Arc
@@ -41,10 +46,10 @@ struct general_formulation : public formulation {
 	RangeArray dual_feas;		// Dual Arc
 	RangeArray valuefunc;		// Dual Path
 
-	IloRange strong_dual;		// Strong duality (CS uses it to extract leader revenue)
+	IloRange strong_dual;		// Strong duality (either opt condition or substitution)
 	RangeArray comp_slack;		// Complementary slackness
 
-	RangeArray bilinear1;
+	RangeArray bilinear1;		// Substitution linearization
 	RangeArray bilinear2;
 	RangeArray bilinear3;
 
@@ -63,7 +68,9 @@ struct general_formulation : public formulation {
 	std::vector<arc_set> toll_sets;
 	std::vector<arc_set> arc_sets;
 
-	general_formulation(const std::vector<path>& paths, space primal_space, space dual_space, opt_condition opt_cond);
+	general_formulation(const std::vector<path>& paths,
+						space primal_space, space dual_space,
+						opt_condition opt_cond, linearization_method linearization);
 	general_formulation(const std::vector<path>& paths, const std::string& code);
 	virtual ~general_formulation();
 

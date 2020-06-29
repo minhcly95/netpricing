@@ -14,11 +14,15 @@ map<string, string> composed_hmodel::VALID_CODES = {
 	{"std", "Standard"},
 	{"apstd", "Arc-Path Standard"},
 	{"vf", "Value Function"},
-	{"apvf", "Arc-Path Value Function"},
-	{"cs", "Complementary Slackness"},
-	{"apcs", "Arc-Path Complementary Slackness"},
-	{"vfcs", "Value Function Complementary Slackness"},
-	{"didi", "Didi's Path"}
+	{"pvf", "Path Value Function"},
+	{"cs1", "Complementary Slackness - Direct"},
+	{"apcs1", "Arc-Path Complementary Slackness - Direct"},
+	{"vfcs1", "Value Function Complementary Slackness - Direct"},
+	{"pcs1", "Path Complementary Slackness - Direct"},
+	{"cs2", "Complementary Slackness - Substitution"},
+	{"apcs2", "Arc-Path Complementary Slackness - Substitution"},
+	{"vfcs2", "Value Function Complementary Slackness - Substitution"},
+	{"pcs2", "Path Complementary Slackness - Substitution"},
 };
 map<string, string> composed_hmodel::VALID_FALLBACK = {
 	{"ustd", "Unprocessed Standard"}

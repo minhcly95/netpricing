@@ -11,33 +11,46 @@
 
 using namespace std;
 
-general_formulation::general_formulation(const std::vector<path>& paths, space primal_space, space dual_space, opt_condition opt_cond) :
+general_formulation::general_formulation(const std::vector<path>& paths,
+										 space primal_space, space dual_space,
+										 opt_condition opt_cond,
+										 linearization_method linearization) :
 	paths(paths), P(paths.size()), preproc(paths),
-	primal_space(primal_space), dual_space(dual_space), opt_cond(opt_cond)
+	primal_space(primal_space), dual_space(dual_space), opt_cond(opt_cond), linearization(linearization)
 {
+	if (opt_cond == STRONG_DUAL && linearization == SUBSTITUTION)
+		throw invalid_argument("cannot have both strong duality opt condition and substitution linearization");
 }
 
 general_formulation::general_formulation(const std::vector<path>& paths, const std::string& code) :
 	paths(paths), P(paths.size()), preproc(paths)
 {
-	auto model = std::tie(primal_space, dual_space, opt_cond);
+	auto model = std::tie(primal_space, dual_space, opt_cond, linearization);
 
 	if (code == "std")
-		model = make_tuple(ARC, ARC, STRONG_DUAL);
+		model = make_tuple(ARC, ARC, STRONG_DUAL, DIRECT);
 	else if (code == "apstd")
-		model = make_tuple(PATH, ARC, STRONG_DUAL);
+		model = make_tuple(PATH, ARC, STRONG_DUAL, DIRECT);
 	else if (code == "vf")
-		model = make_tuple(ARC, PATH, STRONG_DUAL);
-	else if (code == "apvf")
-		model = make_tuple(PATH, PATH, STRONG_DUAL);
-	else if (code == "cs")
-		model = make_tuple(ARC, ARC, COMP_SLACK);
-	else if (code == "apcs")
-		model = make_tuple(PATH, ARC, COMP_SLACK);
-	else if (code == "vfcs")
-		model = make_tuple(ARC, PATH, COMP_SLACK);
-	else if (code == "didi")
-		model = make_tuple(PATH, PATH, COMP_SLACK);
+		model = make_tuple(ARC, PATH, STRONG_DUAL, DIRECT);
+	else if (code == "pvf")
+		model = make_tuple(PATH, PATH, STRONG_DUAL, DIRECT);
+	else if (code == "cs1")
+		model = make_tuple(ARC, ARC, COMP_SLACK, DIRECT);
+	else if (code == "apcs1")
+		model = make_tuple(PATH, ARC, COMP_SLACK, DIRECT);
+	else if (code == "vfcs1")
+		model = make_tuple(ARC, PATH, COMP_SLACK, DIRECT);
+	else if (code == "pcs1")
+		model = make_tuple(PATH, PATH, COMP_SLACK, DIRECT);
+	else if (code == "cs2")
+		model = make_tuple(ARC, ARC, COMP_SLACK, SUBSTITUTION);
+	else if (code == "apcs2")
+		model = make_tuple(PATH, ARC, COMP_SLACK, SUBSTITUTION);
+	else if (code == "vfcs2")
+		model = make_tuple(ARC, PATH, COMP_SLACK, SUBSTITUTION);
+	else if (code == "pcs2")
+		model = make_tuple(PATH, PATH, COMP_SLACK, SUBSTITUTION);
 	else
 		throw invalid_argument("invalid formulation code: " + code);
 }
@@ -135,7 +148,7 @@ void general_formulation::formulate_impl()
 		if (opt_cond == COMP_SLACK)
 			y = VarArray(env, A2, 0, 1, ILOBOOL);
 		else
-			y = VarArray(env, A2, 0, IloInfinity);
+			y = VarArray(env, A2, 0, 1);
 
 		SET_VAR_NAMES_K(info, k, x, y);
 		LOOP_INFO(a, A1) cplex_model.add(x[a]);
@@ -157,29 +170,29 @@ void general_formulation::formulate_impl()
 	}
 	// Dual Path
 	else {
-		lk = IloNumVar(env, -IloInfinity, IloInfinity);
+		lk = IloNumVar(env, 0, IloInfinity);
 		SET_VAR_NAMES_K(model, k, lk);
 		cplex_model.add(lk);
 	}
 
-	// Strong duality
-	if (opt_cond == STRONG_DUAL) {
+	// Direct linearization
+	if (linearization == DIRECT) {
 		tx = VarArray(env, A1, 0, IloInfinity);
 		SET_VAR_NAMES_K(info, k, tx);
 		LOOP_INFO(a, A1) cplex_model.add(tx[a]);
 	}
-	// Complementary slackness
+	// Substitution linearization
 	else {
-		tk = IloNumVar(env, -IloInfinity, IloInfinity);
+		tk = IloNumVar(env, 0, IloInfinity);
 		SET_VAR_NAMES_K(model, k, tk);
 		cplex_model.add(tk);
 	}
 
 	// OBJECTIVE
-	// Strong duality
-	if (opt_cond == STRONG_DUAL)
+	// Direct linearization
+	if (linearization == DIRECT)
 		LOOP_INFO(a, A1) obj.setLinearCoef(tx[a], prob->commodities[k].demand);
-	// Complementary slackness
+	// Substitution linearization
 	else
 		obj.setLinearCoef(tk, prob->commodities[k].demand);
 
@@ -240,37 +253,43 @@ void general_formulation::formulate_impl()
 	}
 
 	// STRONG DUALITY (used for both conditions)
+	bool use_strong_dual = false;
+
 	if (opt_cond == STRONG_DUAL) {
 		strong_dual = IloRange(env, 0, TOLERANCE);
 		LOOP_INFO(a, A1) strong_dual.setLinearCoef(tx[a], 1);
+		use_strong_dual = true;
 	}
-	else {
+	else if (linearization == SUBSTITUTION) {
 		strong_dual = IloRange(env, 0, 0);
 		strong_dual.setLinearCoef(tk, 1);
+		use_strong_dual = true;
 	}
 
-	// Primal
-	if (primal_space == ARC) {
-		LOOP_INFO(a, A1) strong_dual.setLinearCoef(x[a], info.cost_A1.at(a));
-		LOOP_INFO(a, A2) strong_dual.setLinearCoef(y[a], info.cost_A2.at(a));
-	}
-	else {
-		LOOP(p, P) strong_dual.setLinearCoef(z[p], null_costs[p]);
+	if (use_strong_dual) {
+		// Primal
+		if (primal_space == ARC) {
+			LOOP_INFO(a, A1) strong_dual.setLinearCoef(x[a], info.cost_A1.at(a));
+			LOOP_INFO(a, A2) strong_dual.setLinearCoef(y[a], info.cost_A2.at(a));
+		}
+		else {
+			LOOP(p, P) strong_dual.setLinearCoef(z[p], null_costs[p]);
+		}
+
+		// Dual
+		if (dual_space == ARC) {
+			strong_dual.setLinearCoef(lambda[prob->commodities[k].origin], -1);
+			strong_dual.setLinearCoef(lambda[prob->commodities[k].destination], 1);
+		}
+		else {
+			strong_dual.setLinearCoef(lk, -1);
+		}
+
+		cplex_model.add(strong_dual);
 	}
 
-	// Dual
-	if (dual_space == ARC) {
-		strong_dual.setLinearCoef(lambda[prob->commodities[k].origin], -1);
-		strong_dual.setLinearCoef(lambda[prob->commodities[k].destination], 1);
-	}
-	else {
-		strong_dual.setLinearCoef(lk, -1);
-	}
-
-	cplex_model.add(strong_dual);
-
-	// LINEARIZATION
-	if (opt_cond == STRONG_DUAL) {
+	// DIRECT LINEARIZATION
+	if (linearization == DIRECT) {
 		// Bilinear 1
 		bilinear1 = RangeArray(env, A1, -IloInfinity, 0);
 		LOOP_INFO(a, A1) {
@@ -306,8 +325,9 @@ void general_formulation::formulate_impl()
 			cplex_model.add(bilinear3[a]);
 		}
 	}
+
 	// COMPLEMENTARY SLACKNESS
-	else {
+	if (opt_cond == COMP_SLACK) {
 		// Dual Arc
 		if (dual_space == ARC) {
 			// Big-M calculation
@@ -398,7 +418,7 @@ std::vector<IloNumVar> general_formulation::get_all_variables()
 	if (dual_space == ARC) LOOP_INFO(i, V) vars.push_back(lambda[i]);
 	else vars.push_back(lk);
 
-	if (opt_cond == STRONG_DUAL) LOOP_INFO(a, A1) vars.push_back(tx[a]);
+	if (linearization == DIRECT) LOOP_INFO(a, A1) vars.push_back(tx[a]);
 	else vars.push_back(tk);
 
 	return vars;
@@ -470,8 +490,8 @@ std::vector<std::pair<IloNumVar, IloNum>> general_formulation::path_to_solution(
 		sol.emplace(lk, lgraph->get_path_cost(path));
 	}
 
-	// OPT CONDITION
-	if (opt_cond == STRONG_DUAL) {
+	// LINEARIZATION
+	if (linearization == DIRECT) {
 		LOOP_INFO(a, A1) sol.emplace(tx[a], 0);
 		for (int a : toll_sets[p_best])
 			sol.at(tx[a]) = tvals[a];
