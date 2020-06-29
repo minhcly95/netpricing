@@ -216,6 +216,10 @@ bool hybrid_model::solve_impl()
 	double form_time = std::chrono::duration<double>(form_done - start_time).count();
 	cout << "Formulation done in " << form_time  << " s" << endl << endl;
 
+	// Readjust the cplex time limit
+	double time_limit = cplex.getParam(IloCplex::Param::TimeLimit);
+	cplex.setParam(IloCplex::Param::TimeLimit, time_limit - form_time);
+
 	return model_with_generic_callback::solve_impl();
 }
 
