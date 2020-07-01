@@ -88,12 +88,14 @@ add_executable(netpricing
 	"routines/tolls_heuristic_test.cpp"
 	"routines/light_graph_test.cpp"
 	"routines/preprocessing_test.cpp"
+	"routines/data_routines.cpp"
 
 	"graph/light_graph.cpp"
 	"graph/light_graph_enum.cpp"
 	"graph/cplex_graph.cpp")
 
 target_link_libraries(netpricing
+	-lstdc++fs
 	-lilocplex
 	-lconcert
 	-lcplex
@@ -103,5 +105,7 @@ target_link_libraries(netpricing
 
 target_compile_definitions(netpricing PUBLIC -DIL_STD)
 target_compile_options(netpricing PRIVATE -Wno-ignored-attributes)
+
+set_property(TARGET netpricing PROPERTY CXX_STANDARD 17)
 
 # TODO: Add tests and install targets if needed.

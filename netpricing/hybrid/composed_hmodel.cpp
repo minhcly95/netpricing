@@ -4,6 +4,7 @@
 #include "formulations/null_formulation.h"
 #include "formulations/general_formulation.h"
 #include "formulations/standard_formulation.h"
+#include "preprocessors/spgm_preprocessor.h"
 
 #include <iostream>
 #include <sstream>
@@ -23,9 +24,11 @@ map<string, string> composed_hmodel::VALID_CODES = {
 	{"apcs2", "Arc-Path Complementary Slackness - Substitution"},
 	{"vfcs2", "Value Function Complementary Slackness - Substitution"},
 	{"pcs2", "Path Complementary Slackness - Substitution"},
+	{"spgm", "SPGM-processed Standard"}
 };
 map<string, string> composed_hmodel::VALID_FALLBACK = {
-	{"ustd", "Unprocessed Standard"}
+	{"ustd", "Unprocessed Standard"},
+	{"spgm", "SPGM-processed Standard"}
 };
 
 composed_hmodel::composed_hmodel(IloEnv& env, const problem& prob, const std::string& code) :
@@ -78,10 +81,11 @@ vector<formulation*> composed_hmodel::assign_formulations()
 	form_names.back() = VALID_FALLBACK.at(form_codes.back());
 
 	std::vector<formulation*> all_forms(K);
+
 	LOOP(k, K) {
 		auto paths = lgraph.bilevel_feasible_paths_2(prob.commodities[k].origin,
 													 prob.commodities[k].destination,
-													 break_points.back() + 1);
+													 break_points.empty() ? 2 : (break_points.back() + 1));
 
 		if (paths.size() <= 1) {
 			all_forms[k] = new null_formulation();
@@ -98,6 +102,8 @@ vector<formulation*> composed_hmodel::assign_formulations()
 				string& form_code = form_codes.back();
 				if (form_code == "ustd")
 					all_forms[k] = new standard_formulation();
+				else if(form_code == "spgm")
+					all_forms[k] = new standard_formulation(new spgm_preprocessor());
 				else
 					throw runtime_error("fallback code " + form_code + " is not supported");
 				counts.back()++;
@@ -106,7 +112,10 @@ vector<formulation*> composed_hmodel::assign_formulations()
 			else {
 				int i = std::distance(break_points.begin(), it);
 				string& form_code = form_codes[i];
-				all_forms[k] = new general_formulation(paths, form_code);
+				if (form_code == "spgm")
+					all_forms[k] = new standard_formulation(new spgm_preprocessor());
+				else
+					all_forms[k] = new general_formulation(paths, form_code);
 				counts[i]++;
 			}
 		}

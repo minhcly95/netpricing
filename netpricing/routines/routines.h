@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 void follower_solver_perftest();
 void follower_cplex_solver_perftest();
 void follower_light_solver_perftest();
@@ -29,3 +31,5 @@ void light_graph_bilevel_feasible_3_acctest();
 void light_graph_bilevel_feasible_3_perftest();
 
 void path_vs_spgm_preprocessors_compare();
+
+void data_numpaths_stats(std::string prefix);

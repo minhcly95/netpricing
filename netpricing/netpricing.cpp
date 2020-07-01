@@ -74,7 +74,7 @@ string run_model(IloEnv& env, typename model_type::problem_type& prob, string mo
 	//}
 }
 
-void run_routine(int index);
+void run_routine(int index, const vector<string>& args);
 
 int main(int argc, char* argv[])
 {
@@ -85,6 +85,7 @@ int main(int argc, char* argv[])
 	desc.add_options()
 		("help", "display help message")
 		("routine,r", po::value<int>(), "run special routines")
+		("args", po::value<vector<string>>(), "other arguments")
 
 		("standard,s", "run standard model")
 		("vfcut", "run standard model with value function cuts")
@@ -145,10 +146,13 @@ int main(int argc, char* argv[])
 		("delaunay", po::value<int>(), "create a Delaunay graph problem")
 		("voronoi", po::value<int>(), "create a Voronoi graph problem");
 
+	po::positional_options_description pos_desc;
+	pos_desc.add("args", -1);
+
 	po::variables_map vm;
 
 	try {
-		po::store(po::parse_command_line(argc, argv, desc), vm);
+		po::store(po::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
 		po::notify(vm);
 	}
 	catch (std::exception& e) {
@@ -164,7 +168,10 @@ int main(int argc, char* argv[])
 
 	// Special routine
 	if (vm.count("routine")) {
-		run_routine(vm["routine"].as<int>());
+		vector<string> args;
+		if (vm.count("args"))
+			args = vm["args"].as<vector<string>>();
+		run_routine(vm["routine"].as<int>(), args);
 		return 0;
 	}
 
@@ -452,7 +459,13 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void run_routine(int index)
+bool assert_args(const vector<string>& args, int min_length) {
+	if (args.size() < min_length)
+		cerr << "Require " << min_length << " argument(s)" << endl;
+	return args.size() >= min_length;
+}
+
+void run_routine(int index, const vector<string>& args)
 {
 	switch (index)
 	{
@@ -481,6 +494,7 @@ void run_routine(int index)
 	case 22: light_graph_bilevel_feasible_2_perftest(); break;
 	case 23: light_graph_bilevel_feasible_3_acctest(); break;
 	case 24: light_graph_bilevel_feasible_3_perftest(); break;
+	case 25: if (assert_args(args, 1)) data_numpaths_stats(args[0]); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;
