@@ -32,4 +32,7 @@ void light_graph_bilevel_feasible_3_perftest();
 
 void path_vs_spgm_preprocessors_compare();
 
-void data_numpaths_stats(std::string prefix);
+void data_numpaths_stats(std::string prefix, int numpaths);
+void data_pathenum_stats(std::string prefix, int numpaths);
+void data_preprocessing_stats(std::string prefix, int numpaths);
+void data_dimensions_stats(std::string prefix);

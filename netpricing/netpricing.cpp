@@ -494,7 +494,10 @@ void run_routine(int index, const vector<string>& args)
 	case 22: light_graph_bilevel_feasible_2_perftest(); break;
 	case 23: light_graph_bilevel_feasible_3_acctest(); break;
 	case 24: light_graph_bilevel_feasible_3_perftest(); break;
-	case 25: if (assert_args(args, 1)) data_numpaths_stats(args[0]); break;
+	case 25: if (assert_args(args, 2)) data_numpaths_stats(args[0], atoi(args[1].c_str())); break;
+	case 26: if (assert_args(args, 2)) data_pathenum_stats(args[0], atoi(args[1].c_str())); break;
+	case 27: if (assert_args(args, 2)) data_preprocessing_stats(args[0], atoi(args[1].c_str())); break;
+	case 28: if (assert_args(args, 1)) data_dimensions_stats(args[0]); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;
