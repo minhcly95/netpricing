@@ -220,7 +220,9 @@ bool hybrid_model::solve_impl()
 	double time_limit = cplex.getParam(IloCplex::Param::TimeLimit);
 	cplex.setParam(IloCplex::Param::TimeLimit, time_limit - form_time);
 
-	return model_with_generic_callback::solve_impl();
+	model_with_generic_callback::solve_impl();
+
+	return true;
 }
 
 solution hybrid_model::get_solution()

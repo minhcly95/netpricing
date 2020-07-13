@@ -66,7 +66,12 @@ void model_cplex::end() {
 }
 
 double model_cplex::get_best_obj() {
-	return cplex.getObjValue();
+	try {
+		return cplex.getObjValue();
+	}
+	catch (IloException & e) {
+		return 0;
+	}
 }
 
 double model_cplex::get_best_bound() {
@@ -74,7 +79,12 @@ double model_cplex::get_best_bound() {
 }
 
 double model_cplex::get_gap() {
-	return cplex.getMIPRelativeGap();
+	try {
+		return min(cplex.getMIPRelativeGap(), 1.);
+	}
+	catch (IloException & e) {
+		return 1;
+	}
 }
 
 int model_cplex::get_step_count() {
