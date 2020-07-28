@@ -23,6 +23,8 @@ struct formulation : public cplex_def {
 	virtual std::vector<IloNumVar> get_all_variables() = 0;
 	virtual IloExpr get_obj_expr() = 0;
 
+	virtual std::vector<int> get_optimal_path() { return {}; }
+
 	// Convert a path to a solution (must implemented bc of heuristic)
 	virtual std::vector<std::pair<IloNumVar, IloNum>> path_to_solution(const NumArray& tvals,
 																  const std::vector<int>& path) = 0;

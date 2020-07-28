@@ -6,6 +6,7 @@
 #include "../base/processed_var_name.h"
 #include "../../utilities/cplex_compare.h"
 #include "../../graph/light_graph.h"
+#include "../../models/model_utils.h"
 
 #include <tuple>
 
@@ -128,7 +129,6 @@ void general_formulation::prepare()
 
 	null_costs.resize(P);
 	LOOP(p, P) null_costs[p] = lgraph->get_path_cost(paths[p], false);
-
 }
 
 bool general_formulation::check_model(space primal, space dual, opt_condition condition)
@@ -254,14 +254,13 @@ void general_formulation::formulate_impl()
 
 	// STRONG DUALITY (used for both conditions)
 	bool use_strong_dual = false;
+	strong_dual = IloRange(env, 0, TOLERANCE);
 
 	if (opt_cond == STRONG_DUAL) {
-		strong_dual = IloRange(env, 0, TOLERANCE);
 		LOOP_INFO(a, A1) strong_dual.setLinearCoef(tx[a], 1);
 		use_strong_dual = true;
 	}
 	else if (linearization == SUBSTITUTION) {
-		strong_dual = IloRange(env, 0, 0);
 		strong_dual.setLinearCoef(tk, 1);
 		use_strong_dual = true;
 	}
@@ -391,14 +390,14 @@ void general_formulation::formulate_impl()
 						if (info.is_tolled.at(a)) comp_slack[p].setLinearCoef(x[info.a_to_a1(a)], -big_m);
 						else comp_slack[p].setLinearCoef(y[info.a_to_a2(a)], -big_m);
 					}
-					rhs -= big_m * arc_sets[p].size();
+					rhs -= (big_m + TOLERANCE) * arc_sets[p].size();
 				}
 				else {
 					comp_slack[p].setLinearCoef(z[p], -big_m);
-					rhs -= big_m;
+					rhs -= (big_m + TOLERANCE);
 				}
 
-				comp_slack[p].setLB(rhs - TOLERANCE);
+				comp_slack[p].setLB(rhs);
 			}
 			cplex_model.add(comp_slack);
 		}
@@ -436,6 +435,99 @@ IloExpr general_formulation::get_obj_expr()
 		expr.setLinearCoef(tk, prob->commodities[k].demand);
 
 	return expr;
+}
+
+std::vector<int> general_formulation::get_optimal_path()
+{
+	// Primal result
+	path primal_path;
+	if (primal_space == ARC) {
+		// Src-dst map
+		multimap<int, int> src_dst_map;
+		LOOP_INFO(a, A1) {
+			auto arc = info.bimap_A1.left.at(a);
+			if (model->cplex.getValue(x[a]) > 0.5)
+				src_dst_map.emplace(arc.first, arc.second);
+		}
+		LOOP_INFO(a, A2) {
+			auto arc = info.bimap_A2.left.at(a);
+			if (model->cplex.getValue(y[a]) > 0.5)
+				src_dst_map.emplace(arc.first, arc.second);
+		}
+
+		primal_path = extract_path_from_src_dst_map(src_dst_map);
+	}
+	else {
+		NumArray zvals = get_values(model->cplex, z);
+		LOOP(p, P)
+			if (zvals[p] > 0.5)
+				primal_path = paths[p];
+		assert(!primal_path.empty());
+	}
+
+	//cerr << "Comm " << k << " Primal Matched ";
+	//for (int i : primal_path) cerr << i << " ";
+	//cerr << endl;
+
+	// Dual result (to verify)
+	//if (dual_space == ARC) {
+	//}
+	//else {
+	//	LOOP(p, P) {
+	//		double expr_val = model->cplex.getValue(valuefunc[p].getExpr());
+	//		if (expr_val >= valuefunc[p].getUB() - TOLERANCE) {
+	//			cerr << "Comm " << k << " Dual Matched ";
+	//			for (int i : paths[p]) cerr << i << " ";
+	//			cerr << endl;
+	//		}
+	//		expr_val = model->cplex.getValue(comp_slack[p].getExpr());
+	//		if (expr_val <= comp_slack[p].getLB() + TOLERANCE * 10) {
+	//			cerr << "Comm " << k << " CS Matched ";
+	//			for (int i : paths[p]) cerr << i << " ";
+	//			cerr << endl;
+	//		}
+	//	}
+	//}
+
+	// Reverse preprocessing
+	light_graph original(prob->graph);
+	original.set_toll_arcs_enabled(false);
+
+	auto toll_arcs = lgraph->get_toll_list(primal_path);
+	set<int> toll_heads;
+	toll_heads.insert(prob->commodities[k].destination);
+
+	// Extract toll heads
+	for (const auto& pair : toll_arcs) {
+		auto edge = EDGE_FROM_SRC_DST(*prob, pair.first, pair.second);
+		toll_heads.insert(pair.first);
+	}
+
+	path new_path;
+	auto it = primal_path.begin();
+
+	while (it != primal_path.end()) {
+		int src = *it;
+		it = find_if(it, primal_path.end(),
+					 [&](int i) {
+						 return toll_heads.count(i);
+					 });
+		assert(it != primal_path.end());
+		int dst = *it;
+
+		if (src == dst) {
+			new_path.push_back(src);
+		}
+		else {
+			auto segment = original.shortest_path(src, dst);
+			assert(segment.size());
+			new_path.insert(new_path.end(), segment.begin(), segment.end());
+		}
+
+		it++;
+	}
+
+	return new_path;
 }
 
 std::vector<std::pair<IloNumVar, IloNum>> general_formulation::path_to_solution(const NumArray& tvals, const std::vector<int>& _)
@@ -504,4 +596,124 @@ std::vector<std::pair<IloNumVar, IloNum>> general_formulation::path_to_solution(
 	}
 
 	return vector<pair<IloNumVar, IloNum>>(sol.begin(), sol.end());
+}
+
+bool general_formulation::has_callback()
+{
+	return check_model(ARC, PATH, COMP_SLACK);
+}
+
+void general_formulation::invoke_callback(const IloCplex::Callback::Context& context, const NumArray& tvals)
+{
+	// Specialized for VFCS models
+	assert(check_model(ARC, PATH, COMP_SLACK));
+
+	// Src-dst map
+	multimap<int, int> src_dst_map;
+	LOOP_INFO(a, A1) {
+		auto arc = info.bimap_A1.left.at(a);
+		if (context.getCandidateValue(x[a]) > 0.5)
+			src_dst_map.emplace(arc.first, arc.second);
+	}
+	LOOP_INFO(a, A2) {
+		auto arc = info.bimap_A2.left.at(a);
+		if (context.getCandidateValue(y[a]) > 0.5)
+			src_dst_map.emplace(arc.first, arc.second);
+	}
+
+	// Get the current path
+	auto path = extract_path_from_src_dst_map(src_dst_map);
+
+	// Check if it is bilevel feasible
+	bool bifeas = !path.empty() &&
+		std::any_of(paths.begin(), paths.end(),
+					[&](const vector<int>& p) {
+						return path == p;
+					});
+
+	// Build a cut if it is not
+	if (!bifeas) {
+		//cerr << "Comm " << k << " Reject ";
+		//for (auto& pair : src_dst_map) {
+		//	cerr << "(" << pair.first << "->" << pair.second << ") ";
+		//}
+		//cerr << endl;
+
+		// Big-M calculation
+		cost_type path_null_cost = 0;
+		set<pair<int, int>> path_toll_set;
+		for (auto& arc : src_dst_map) {
+			auto& edge = lgraph->edge(arc);
+			path_null_cost += edge.cost;
+			if (edge.is_tolled) path_toll_set.insert(arc);
+		}
+
+		cost_type big_m = path_null_cost - null_costs[0];
+		for (auto& arc : path_toll_set) {
+			big_m += prob->big_n[info.bimap_A1.right.at(arc)];
+		}
+
+		// Cut Formulation
+		IloRange cut(env, 0, IloInfinity);
+
+		cut.setLinearCoef(lk, 1);
+		for (auto& arc : path_toll_set) cut.setLinearCoef(t[info.bimap_A1.right.at(arc)], -1);
+
+		for (auto& arc : src_dst_map) {
+			int a = info.bimap_A.right.at(arc);
+			if (info.is_tolled.at(a)) cut.setLinearCoef(x[info.a_to_a1(a)], -big_m);
+			else cut.setLinearCoef(y[info.a_to_a2(a)], -big_m);
+		}
+
+		cost_type rhs = path_null_cost;
+		rhs -= (big_m + TOLERANCE) * src_dst_map.size();
+
+		cut.setLB(rhs);
+
+		context.rejectCandidate(cut);
+		cut.end();
+	}
+	//else {
+	//	cerr << "Comm " << k << " Accept ";
+	//	for (int i : path) {
+	//		cerr << i << " ";
+	//	}
+	//	cerr << endl;
+	//}
+}
+
+std::vector<int> general_formulation::extract_path_from_src_dst_map(const std::multimap<int, int>& src_dst_map)
+{
+	// Build a path
+	vector<int> path;
+	set<int> visited;
+	multimap<int, int> map(src_dst_map);
+
+	auto& comm = prob->commodities[k];
+	int current = comm.origin;
+	path.push_back(current);
+	visited.insert(current);
+
+	while (current != comm.destination) {
+		auto it = map.find(current);
+		current = it->second;
+
+		// A loop
+		if (visited.count(current)) {
+			auto loop_it = std::find(path.begin(), path.end(), current);
+			path.erase(loop_it, path.end());
+		}
+
+		path.push_back(current);
+		visited.insert(current);
+
+		map.erase(it);
+	}
+
+	// Test if cyclic, return empty
+	if (path.size() - 1 != src_dst_map.size()) {
+		return vector<int>();
+	}
+
+	return path;
 }

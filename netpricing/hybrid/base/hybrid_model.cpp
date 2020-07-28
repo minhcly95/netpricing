@@ -3,6 +3,7 @@
 #include "formulation.h"
 #include "../../macros.h"
 #include "../../utilities/set_var_name.h"
+#include "../../models/model_utils.h"
 
 #include <iostream>
 
@@ -227,7 +228,37 @@ bool hybrid_model::solve_impl()
 
 solution hybrid_model::get_solution()
 {
-	return solution();
+	solution sol;
+
+	NumArray tvals = get_values(cplex, t);
+	LOOP(a, A1) sol.tolls.push_back(tvals[a]);
+	tvals.end();
+
+	// Solve for best path
+	sol.paths = heur_solver.solve(sol.tolls);
+
+	// Verify
+	LOOP(k, K) {
+		if (all_formulations[k] != nullptr) {
+			auto path = all_formulations[k]->get_optimal_path();
+			if (path.empty()) continue;
+			if (path != sol.paths[k]) {
+				//cerr << "Comm " << k << ": Mismatch between model and solver" << endl;
+
+				//cerr << "Model: ";
+				//for (int i : path) cerr << i << " ";
+				//cerr << endl;
+
+				//cerr << "Solver: ";
+				//for (int i : sol.paths[k]) cerr << i << " ";
+				//cerr << endl;
+
+				sol.paths[k] = path;
+			}
+		}
+	}
+
+	return sol;
 }
 
 pair<IloCplex::Callback::Function*, hybrid_model::ContextId> hybrid_model::attach_callback()

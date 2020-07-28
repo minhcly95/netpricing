@@ -81,6 +81,14 @@ struct general_formulation : public formulation {
 	virtual std::vector<IloNumVar> get_all_variables() override;
 	virtual IloExpr get_obj_expr() override;
 
+	virtual std::vector<int> get_optimal_path() override;
+
 	virtual std::vector<std::pair<IloNumVar, IloNum>> path_to_solution(const NumArray& tvals,
 																	   const std::vector<int>& path) override;
+
+	virtual bool has_callback() override;
+	virtual void invoke_callback(const IloCplex::Callback::Context& context, const NumArray& tvals) override;
+
+	// Helper functions
+	std::vector<int> extract_path_from_src_dst_map(const std::multimap<int, int>& src_dst_map);
 };

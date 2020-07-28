@@ -33,8 +33,13 @@ void model_cplex::solve_relaxation()
 	IloCplex relaxation_cplex(relaxation_model);
 	relaxation_cplex.setParam(IloCplex::Threads, 1);
 	relaxation_cplex.setOut(env.getNullStream());
-	relaxation_cplex.solve();
-	relaxation = relaxation_cplex.getObjValue();
+	try {
+		relaxation_cplex.solve();
+		relaxation = relaxation_cplex.getObjValue();
+	}
+	catch (IloCplex::Exception & e) {
+		cerr << "Error when solving relaxation: " << e << endl;
+	}
 
 	auto end = std::chrono::high_resolution_clock::now();
 	double time = std::chrono::duration<double>(end - start).count();
