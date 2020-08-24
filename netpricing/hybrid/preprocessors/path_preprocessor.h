@@ -2,7 +2,7 @@
 
 #include "../base/preprocessor.h"
 
-struct path_preprocessor : preprocessor {
+struct path_preprocessor : public virtual preprocessor {
 	using path = std::vector<int>;
 
 	int P;
@@ -10,5 +10,5 @@ struct path_preprocessor : preprocessor {
 
 	path_preprocessor(std::vector<path> paths);
 
-	virtual preprocess_info preprocess(const problem& prob, int k) override;
+	virtual preprocess_info preprocess_impl(const light_graph& graph, const commodity& comm, int k = -1) override;
 };

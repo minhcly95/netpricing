@@ -27,14 +27,18 @@ light_graph::light_graph(const problem_base::graph_type& graph) :
 	auto cost_map = boost::get(boost::edge_weight, graph);
 	auto is_tolled_map = boost::get(edge_tolled, graph);
 
+	int counter = 0;
+
 	problem_base::edge_iterator ei, ei_end;
 	for (tie(ei, ei_end) = boost::edges(graph); ei != ei_end; ++ei) {
 		int src = boost::source(*ei, graph);
 		int dst = boost::target(*ei, graph);
 		cost_type cost = cost_map[*ei];
 		bool is_tolled = is_tolled_map[*ei];
+		int index = is_tolled ? counter++ : -1;
 
 		Eall.emplace_back(light_edge{
+			.index = index,
 			.src = src,
 			.dst = dst,
 			.cost = cost,
@@ -50,6 +54,14 @@ light_graph::light_graph(const problem_base::graph_type& graph) :
 		E[edge.src].emplace(edge.dst, a);
 		Er[edge.dst].emplace(edge.src, a);
 	}
+}
+
+int light_graph::num_tolled() const
+{
+	return std::count_if(Eall.begin(), Eall.end(),
+						 [&](const light_edge& e) {
+							 return e.is_tolled;
+						 });
 }
 
 light_edge& light_graph::edge(int src, int dst)
@@ -161,7 +173,7 @@ bool light_graph::is_toll_free(const path& p) const
 	return true;
 }
 
-vector<cost_type> light_graph::price_from_src(int src)
+vector<cost_type> light_graph::price_from_src(int src) const
 {
 	vector<int> parents;
 	vector<cost_type> distances;
@@ -171,7 +183,7 @@ vector<cost_type> light_graph::price_from_src(int src)
 	return distances;
 }
 
-vector<cost_type> light_graph::price_to_dst(int dst)
+vector<cost_type> light_graph::price_to_dst(int dst) const
 {
 	vector<int> parents;
 	vector<cost_type> distances;
@@ -181,11 +193,11 @@ vector<cost_type> light_graph::price_to_dst(int dst)
 	return distances;
 }
 
-bool light_graph::dijkstra(int from, std::vector<cost_type>& distances, std::vector<int>& parents, int to, bool reversed)
+bool light_graph::dijkstra(int from, std::vector<cost_type>& distances, std::vector<int>& parents, int to, bool reversed) const
 {
 	using cipair = std::pair<cost_type, int>;
 
-	vector<map<int, int>>& Ec = reversed ? Er : E;
+	const vector<map<int, int>>& Ec = reversed ? Er : E;
 
 	parents = std::move(vector<int>(V, -1));
 	distances = std::move(vector<cost_type>(V, numeric_limits<double>::infinity()));
@@ -222,7 +234,7 @@ bool light_graph::dijkstra(int from, std::vector<cost_type>& distances, std::vec
 			if (!temp_enabled_V[it->first])
 				continue;
 
-			light_edge& edge = Eall[it->second];
+			const light_edge& edge = Eall[it->second];
 
 			// Skip disabled edge
 			if (!edge.enabled || !edge.temp_enabled)

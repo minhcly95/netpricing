@@ -43,7 +43,8 @@ struct preprocess_info {
 };
 
 struct preprocessor {
-	virtual preprocess_info preprocess(const problem& prob, int k);
+	preprocess_info preprocess(const problem& prob, int k);
+	virtual preprocess_info preprocess_impl(const light_graph& graph, const commodity& comm, int k = -1);
 };
 
 #define LOOP_INFO(index, set) for (auto index : info.set)

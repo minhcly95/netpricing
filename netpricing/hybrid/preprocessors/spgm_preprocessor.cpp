@@ -48,15 +48,16 @@ void add_toll_free_arc(preprocess_info& info, int& a, int src, int dst, cost_typ
 	a++;
 }
 
-preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
+preprocess_info spgm_preprocessor::preprocess_impl(const light_graph& graph, const commodity& comm, int k)
 {
 	using arc_bimap_rel = preprocess_info::arc_bimap::value_type;
 
-	light_graph original(prob.graph);
+	light_graph original = preprocessor::preprocess_impl(graph, comm, k).build_graph();
 
 	// Origin and destination prices
-	int orig = prob.commodities[k].origin;
-	int dest = prob.commodities[k].destination;
+	int orig = comm.origin;
+	int dest = comm.destination;
+	original.set_toll_arcs_enabled(true);
 	vector<cost_type> lower_orig = original.price_from_src(orig);
 	vector<cost_type> lower_dest = original.price_to_dst(dest);
 
@@ -74,12 +75,15 @@ preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
 	map<int, set<int>> all_src;
 	map<int, set<int>> all_dst;
 
+	LOOP(i, graph.V) info.V.insert(i);
+
 	// Add all tolled arcs
-	LOOP(i, boost::num_vertices(prob.graph)) info.V.insert(i);
-	LOOP(a, prob.tolled_index_map.size()) {
-		SRC_DST_FROM_A1(prob, a);
-		cost_type cost = prob.cost_map[edge];
-		int i = src, j = dst;
+	int a = 0;
+	for (const light_edge& e : original.Eall) {
+		if (!e.is_tolled) continue;
+
+		cost_type cost = e.cost;
+		int i = e.src, j = e.dst;
 
 		// Elimination rules
 		// Rules #1, #2: lower and upper prices are the same => arc has no effect
@@ -93,22 +97,21 @@ preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
 
 		// Pass, add to info
 		info.A.insert(a);
-		info.A1.insert(a);
+		info.A1.insert(e.index);
 
-		info.bimap_A.insert(arc_bimap_rel(a, make_pair(src, dst)));
-		info.bimap_A1.insert(arc_bimap_rel(a, make_pair(src, dst)));
+		info.bimap_A.insert(arc_bimap_rel(a, make_pair(i, j)));
+		info.bimap_A1.insert(arc_bimap_rel(e.index, make_pair(i, j)));
 
 		info.cost_A.emplace(a, cost);
-		info.cost_A1.emplace(a, cost);
+		info.cost_A1.emplace(e.index, cost);
 
 		info.is_tolled.emplace(a, true);
 
 		all_src[i].insert(j);
 		all_dst[j].insert(i);
-	}
 
-	// Starting index for toll-free arcs
-	int new_a = prob.tolled_index_map.size();
+		a++;
+	}
 
 	// Exclude O, D from set of src, dst
 	all_src.erase(orig);
@@ -118,7 +121,7 @@ preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
 
 	// Add toll-free arcs
 	// O-D arc
-	add_toll_free_arc(info, new_a, orig, dest, upper_total);
+	add_toll_free_arc(info, a, orig, dest, upper_total);
 
 	// O-src arcs
 	for (auto& pair : all_src) {
@@ -129,7 +132,7 @@ preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
 		// Rule #7
 		if (upper_total <= cost + lower_dest[i]) continue;
 
-		add_toll_free_arc(info, new_a, orig, i, cost);
+		add_toll_free_arc(info, a, orig, i, cost);
 	}
 
 	// dst-D arcs
@@ -141,7 +144,7 @@ preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
 		// Rule #8
 		if (upper_total <= lower_orig[j] + cost) continue;
 
-		add_toll_free_arc(info, new_a, j, dest, cost);
+		add_toll_free_arc(info, a, j, dest, cost);
 	}
 
 	// dst-src arcs
@@ -170,11 +173,11 @@ preprocess_info spgm_preprocessor::preprocess(const problem& prob, int k)
 				// i connects to j by a tolled arc
 				// only connect j to i if j has another i' and i has another j'
 				if (pair_j.second.size() > 1 && pair_i.second.size() > 1)
-					add_toll_free_arc(info, new_a, j, i, cost);
+					add_toll_free_arc(info, a, j, i, cost);
 			}
 			else {
 				// i does not connect to j
-				add_toll_free_arc(info, new_a, j, i, cost);
+				add_toll_free_arc(info, a, j, i, cost);
 			}
 		}
 	}

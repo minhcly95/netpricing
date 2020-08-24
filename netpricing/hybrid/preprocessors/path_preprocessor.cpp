@@ -11,9 +11,9 @@ path_preprocessor::path_preprocessor(std::vector<path> paths) :
 {
 }
 
-preprocess_info path_preprocessor::preprocess(const problem& prob, int k)
+preprocess_info path_preprocessor::preprocess_impl(const light_graph& graph, const commodity& comm, int k)
 {
-	preprocess_info info = preprocessor::preprocess(prob, k);
+	preprocess_info info = preprocessor::preprocess_impl(graph, comm, k);
 
 	using arc = pair<int, int>;
 	set<arc> keep_A;
@@ -50,7 +50,7 @@ preprocess_info path_preprocessor::preprocess(const problem& prob, int k)
 			it++;
 	}
 
-	info.reduce(prob.commodities[k].origin, prob.commodities[k].destination);
+	info.reduce(comm.origin, comm.destination);
 	info.clean();
 
 	cout << "Comm " << k << ": " << P << " paths, " << info.V.size() << " nodes, "

@@ -10,6 +10,7 @@
 
 struct light_edge
 {
+	int index;
 	int src;
 	int dst;
 	cost_type cost;
@@ -34,6 +35,8 @@ struct light_graph
 
 	light_graph(int V);
 	light_graph(const problem_base::graph_type& graph);
+
+	int num_tolled() const;
 
 	light_edge& edge(int src, int dst);
 	light_edge& edge(const iipair& pair);
@@ -62,9 +65,9 @@ struct light_graph
 	std::vector<path> bilevel_feasible_paths_2(int from, int to, int k, bool filter=true);
 
 	// All nodes smallest costs
-	std::vector<cost_type> price_from_src(int src);
-	std::vector<cost_type> price_to_dst(int dst);
+	std::vector<cost_type> price_from_src(int src) const;
+	std::vector<cost_type> price_to_dst(int dst) const;
 
 	// Master routine
-	bool dijkstra(int from, std::vector<cost_type>& distances, std::vector<int>& parents, int to = -1, bool reversed = false);
+	bool dijkstra(int from, std::vector<cost_type>& distances, std::vector<int>& parents, int to = -1, bool reversed = false) const;
 };

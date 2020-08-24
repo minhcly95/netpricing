@@ -223,8 +223,10 @@ light_graph preprocess_info::build_graph()
 		auto arc = bimap_A.left.at(a);
 		cost_type cost = cost_A.at(a);
 		bool tolled = is_tolled.at(a);
+		int index = tolled ? a_to_a1(a) : -1;
 
 		lgraph.Eall.emplace_back(light_edge{
+			.index = index,
 			.src = arc.first,
 			.dst = arc.second,
 			.cost = cost,
@@ -244,36 +246,41 @@ light_graph preprocess_info::build_graph()
 	return lgraph;
 }
 
+preprocess_info preprocessor::preprocess(const problem& prob, int k) {
+	return preprocess_impl(prob.graph, prob.commodities[k], k);
+}
+
 // Default proprocessor: extract problem to preprocess_info
-preprocess_info preprocessor::preprocess(const problem& prob, int k)
+preprocess_info preprocessor::preprocess_impl(const light_graph& graph, const commodity& comm, int k)
 {
 	using arc_bimap_rel = preprocess_info::arc_bimap::value_type;
 
 	preprocess_info info;
 
-	LOOP(i, boost::num_vertices(prob.graph)) info.V.insert(i);
-	LOOP(a, boost::num_edges(prob.graph)) info.A.insert(a);
-	LOOP(a, prob.tolled_index_map.size()) info.A1.insert(a);
-	LOOP(a, prob.tollfree_index_map.size()) info.A2.insert(a);
+	LOOP(i, graph.V) info.V.insert(i);
 
-	for (int a : info.A) {
-		SRC_DST_FROM_A(prob, a);
-		cost_type cost = prob.cost_map[edge];
-		bool is_tolled = prob.is_tolled_map[edge];
+	int a2 = 0;
+	LOOP(a, graph.Eall.size()) {
+		info.A.insert(a);
 
-		info.bimap_A.insert(arc_bimap_rel(a, make_pair(src, dst)));
+		const light_edge& e = graph.Eall.at(a);
+		cost_type cost = e.cost;
+		bool is_tolled = e.is_tolled;
+
+		info.bimap_A.insert(arc_bimap_rel(a, make_pair(e.src, e.dst)));
 		info.cost_A.emplace(a, cost);
 		info.is_tolled.emplace(a, is_tolled);
 
-		if (is_tolled) {
-			int a1 = A_TO_A1(prob, a);
-			info.bimap_A1.insert(arc_bimap_rel(a1, make_pair(src, dst)));
-			info.cost_A1.emplace(a1, cost);
+	 	if (is_tolled) {
+			info.bimap_A1.insert(arc_bimap_rel(e.index, make_pair(e.src, e.dst)));
+			info.cost_A1.emplace(e.index, cost);
+			info.A1.insert(e.index);
 		}
 		else {
-			int a2 = A_TO_A2(prob, a);
-			info.bimap_A2.insert(arc_bimap_rel(a2, make_pair(src, dst)));
+			info.bimap_A2.insert(arc_bimap_rel(a2, make_pair(e.src, e.dst)));
 			info.cost_A2.emplace(a2, cost);
+			info.A2.insert(a2);
+			a2++;
 		}
 	}
 
