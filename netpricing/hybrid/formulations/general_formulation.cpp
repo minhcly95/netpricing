@@ -13,18 +13,19 @@
 using namespace std;
 
 general_formulation::general_formulation(const std::vector<path>& paths,
+										 const light_graph& original,
 										 space primal_space, space dual_space,
 										 opt_condition opt_cond,
 										 linearization_method linearization) :
-	paths(paths), P(paths.size()), preproc(paths),
+	paths(paths), P(paths.size()), original(original), preproc(paths),
 	primal_space(primal_space), dual_space(dual_space), opt_cond(opt_cond), linearization(linearization)
 {
 	if (opt_cond == STRONG_DUAL && linearization == SUBSTITUTION)
 		throw invalid_argument("cannot have both strong duality opt condition and substitution linearization");
 }
 
-general_formulation::general_formulation(const std::vector<path>& paths, const std::string& code) :
-	paths(paths), P(paths.size()), preproc(paths)
+general_formulation::general_formulation(const std::vector<path>& paths, const light_graph& original, const std::string& code) :
+	paths(paths), P(paths.size()), original(original), preproc(paths)
 {
 	auto model = std::tie(primal_space, dual_space, opt_cond, linearization);
 
@@ -64,7 +65,8 @@ general_formulation::~general_formulation()
 void general_formulation::prepare()
 {
 	// Preprocessing
-	info = preproc.preprocess(*prob, k);
+	info = preproc.preprocess_impl(original, prob->commodities[k], k);
+
 	V = *(info.V.rbegin()) + 1;
 	A = *(info.A.rbegin()) + 1;
 	A1 = *(info.A1.rbegin()) + 1;
@@ -72,8 +74,6 @@ void general_formulation::prepare()
 	lgraph = new light_graph(info.build_graph());
 
 	// Process path
-	light_graph original(prob->graph);
-
 	toll_sets.resize(P);
 	arc_sets.resize(P);
 	lgraph->set_toll_arcs_enabled(false);

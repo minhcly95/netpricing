@@ -7,10 +7,11 @@
 #include <map>
 
 struct composed_hmodel : public hybrid_model {
-	light_graph lgraph;
 	std::string code;
 	std::vector<std::string> form_codes;
 	std::vector<int> break_points;
+
+	bool pre_spgm;
 
 	static std::map<std::string, std::string> VALID_CODES;
 	static std::map<std::string, std::string> VALID_FALLBACK;
@@ -19,4 +20,6 @@ struct composed_hmodel : public hybrid_model {
 
 	// Inherited via hybrid_model
 	virtual std::vector<formulation*> assign_formulations() override;
+
+	virtual void config(const model_config& conf) override;
 };

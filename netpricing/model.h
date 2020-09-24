@@ -19,6 +19,7 @@ struct model_config {
 	bool full_mode;
 	int max_paths;
 	bool relax_only;
+	bool pre_spgm;
 };
 
 struct model_base {

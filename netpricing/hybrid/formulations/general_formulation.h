@@ -56,6 +56,7 @@ struct general_formulation : public formulation {
 	// Preprocessor
 	path_preprocessor preproc;
 	preprocess_info info;
+	light_graph original;
 	light_graph* lgraph;
 
 	// Path attributes
@@ -68,10 +69,10 @@ struct general_formulation : public formulation {
 	std::vector<arc_set> toll_sets;
 	std::vector<arc_set> arc_sets;
 
-	general_formulation(const std::vector<path>& paths,
+	general_formulation(const std::vector<path>& paths, const light_graph& original,
 						space primal_space, space dual_space,
 						opt_condition opt_cond, linearization_method linearization);
-	general_formulation(const std::vector<path>& paths, const std::string& code);
+	general_formulation(const std::vector<path>& paths, const light_graph& original, const std::string& code);
 	virtual ~general_formulation();
 
 	void prepare();

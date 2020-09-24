@@ -137,6 +137,7 @@ int main(int argc, char* argv[])
 		("full-mode,F", "add all cuts to root node")
 		("max-paths,P", po::value<int>()->default_value(10), "maximum num paths for path hybrid models")
 		("relax-only,R", "only solve the relaxation")
+		("pre-spgm,S", "apply SPGM before path-based preprocessing")
 
 		("nodes,n", po::value<int>()->default_value(10), "number of nodes in the random problem")
 		("arcs,a", po::value<int>()->default_value(20), "number of arcs in the random problem")
@@ -268,6 +269,7 @@ int main(int argc, char* argv[])
 	const bool full_mode = vm.count("full-mode");
 	const int max_paths = vm["max-paths"].as<int>();
 	const bool relax_only = vm.count("relax-only");
+	const bool pre_spgm = vm.count("pre-spgm");
 
 	// Configuration
 	config conf = {
@@ -280,10 +282,11 @@ int main(int argc, char* argv[])
 			.pre_cut = pre_cut,
 			.full_mode = full_mode,
 			.max_paths = max_paths,
-			.relax_only = relax_only
+			.relax_only = relax_only,
+			.pre_spgm = pre_spgm
 		}
 	};
-	cout << "Config:" << endl <<
+	cout << boolalpha << "Config:" << endl <<
 		"  Number of threads: " << num_thread << endl <<
 		"  Variable selection: " << var_select << endl <<
 		"  Time limit: " << time_limit << endl <<
@@ -291,7 +294,8 @@ int main(int argc, char* argv[])
 		"  Pre-solved cuts: " << pre_cut << endl <<
 		"  Full mode: " << full_mode << endl <<
 		"  Max num paths: " << max_paths << endl <<
-		"  Relax only: " << relax_only << endl;
+		"  Relax only: " << relax_only << endl <<
+		"  Pre SPGM: " << pre_spgm << endl;
 
 	if (vm.count("standard")) {
 		report << "STANDARD:" << endl;

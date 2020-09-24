@@ -32,7 +32,7 @@ map<string, string> composed_hmodel::VALID_FALLBACK = {
 };
 
 composed_hmodel::composed_hmodel(IloEnv& env, const problem& prob, const std::string& code) :
-	hybrid_model(env, prob), lgraph(prob.graph), code(code)
+	hybrid_model(env, prob), code(code), pre_spgm(false)
 {
 	stringstream ss(code);
 	string token;
@@ -81,9 +81,19 @@ vector<formulation*> composed_hmodel::assign_formulations()
 	form_names.back() = VALID_FALLBACK.at(form_codes.back());
 
 	std::vector<formulation*> all_forms(K);
+	spgm_preprocessor spgm_preproc;
 
 	LOOP(k, K) {
-		auto paths = lgraph.bilevel_feasible_paths_2(prob.commodities[k].origin,
+		light_graph* graph;
+
+		if (pre_spgm) {
+			auto info = spgm_preproc.preprocess(prob, k);
+			graph = new light_graph(info.build_graph());
+		}
+		else {
+			graph = new light_graph(prob.graph);
+		}
+		auto paths = graph->bilevel_feasible_paths_2(prob.commodities[k].origin,
 													 prob.commodities[k].destination,
 													 break_points.empty() ? 2 : (break_points.back() + 1));
 
@@ -115,10 +125,12 @@ vector<formulation*> composed_hmodel::assign_formulations()
 				if (form_code == "spgm")
 					all_forms[k] = new standard_formulation(new spgm_preprocessor());
 				else
-					all_forms[k] = new general_formulation(paths, form_code);
+					all_forms[k] = new general_formulation(paths, *graph, form_code);
 				counts[i]++;
 			}
 		}
+
+		delete graph;
 	}
 
 	cout << "CODE: " << code << endl;
@@ -128,4 +140,10 @@ vector<formulation*> composed_hmodel::assign_formulations()
 	}
 
 	return all_forms;
+}
+
+void composed_hmodel::config(const model_config& conf)
+{
+	hybrid_model::config(conf);
+	pre_spgm = conf.pre_spgm;
 }

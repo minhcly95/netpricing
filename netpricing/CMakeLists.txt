@@ -50,6 +50,7 @@ add_executable(netpricing
 	"hybrid/formulations/general_formulation.cpp"
 	"hybrid/preprocessors/path_preprocessor.cpp"
 	"hybrid/preprocessors/spgm_preprocessor.cpp"
+	"hybrid/preprocessors/path_spgm_preprocessor.cpp"
 
 	"hybrid/standard_hmodel.cpp"
 	"hybrid/value_func_hmodel.cpp"
