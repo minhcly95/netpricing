@@ -502,6 +502,7 @@ void run_routine(int index, const vector<string>& args)
 	case 26: if (assert_args(args, 2)) data_pathenum_stats(args[0], atoi(args[1].c_str())); break;
 	case 27: if (assert_args(args, 2)) data_preprocessing_stats(args[0], atoi(args[1].c_str())); break;
 	case 28: if (assert_args(args, 1)) data_dimensions_stats(args[0]); break;
+	case 29: if (assert_args(args, 2)) data_path_spgm_preprocessing_stats(args[0], atoi(args[1].c_str())); break;
 	default:
 		cerr << "Wrong routine number" << endl;
 		break;

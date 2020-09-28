@@ -36,3 +36,4 @@ void data_numpaths_stats(std::string prefix, int numpaths);
 void data_pathenum_stats(std::string prefix, int numpaths);
 void data_preprocessing_stats(std::string prefix, int numpaths);
 void data_dimensions_stats(std::string prefix);
+void data_path_spgm_preprocessing_stats(std::string prefix, int numpaths);

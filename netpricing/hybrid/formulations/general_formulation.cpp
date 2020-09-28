@@ -129,6 +129,12 @@ void general_formulation::prepare()
 
 	null_costs.resize(P);
 	LOOP(p, P) null_costs[p] = lgraph->get_path_cost(paths[p], false);
+
+	// Add a little penalty to favor path with fewest arcs
+	LOOP_INFO(a, A2) {
+		auto arc = info.bimap_A2.left.at(a);
+		lgraph->edge(arc).toll = TOLLFREE_PENALTY;
+	}
 }
 
 bool general_formulation::check_model(space primal, space dual, opt_condition condition)

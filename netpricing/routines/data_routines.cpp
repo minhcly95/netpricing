@@ -113,3 +113,46 @@ void data_dimensions_stats(string prefix) {
 			lgraph.Eall.size() << endl;
 	}
 }
+
+
+void data_path_spgm_preprocessing_stats(string prefix, int numpaths) {
+	regex fileregex("^" + prefix + "\\S*\\.json$");
+
+	for (auto& entry : fs::directory_iterator(".")) {
+		string filename = string(entry.path().filename());
+		if (!regex_match(filename, fileregex))
+			continue;
+
+		problem prob = problem::read_from_json(filename)[0];
+
+		const char* TAB = "\t";
+
+		LOOP(k, prob.commodities.size()) {
+			commodity& comm = prob.commodities[k];
+			spgm_preprocessor sproc;
+
+			std::cout.setstate(std::ios_base::failbit);
+			auto info = sproc.preprocess(prob, k);
+			std::cout.clear();
+
+			light_graph graph = info.build_graph();
+
+			auto ps = graph.bilevel_feasible_paths_2(comm.origin, comm.destination, numpaths + 1);
+
+			cout << ps.size() << TAB;
+
+			if (ps.size() <= numpaths) {
+				path_preprocessor pproc(ps);
+
+				std::cout.setstate(std::ios_base::failbit);
+				auto info1 = pproc.preprocess_impl(graph, comm, k);
+				std::cout.clear();
+
+				cout << info1.V.size() << TAB << info1.A.size() << TAB << info1.A1.size() << endl;
+			}
+			else {
+				cout << "-1" << TAB << "-1" << TAB << "-1" << endl;
+			}
+		}
+	}
+}
