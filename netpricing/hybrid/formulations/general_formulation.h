@@ -8,7 +8,7 @@ struct light_graph;
 struct general_formulation : public formulation {
 	constexpr static double TOLERANCE = 1e-4;
 	constexpr static double TOLL_PREFERENCE = 0.9999;
-	constexpr static double TOLLFREE_PENALTY = 0.0001;
+	//constexpr static double TOLLFREE_PENALTY = 0.0001;
 
 	enum space : bool {
 		ARC = false,

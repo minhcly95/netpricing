@@ -1,6 +1,7 @@
 #include "spgm_preprocessor.h"
 
 #include <iostream>
+#include <random>
 
 #include "../../problem.h"
 #include "../../macros.h"
@@ -12,6 +13,13 @@ void add_toll_free_arc(preprocess_info& info, int& a, int src, int dst, cost_typ
 	using arc_bimap_rel = preprocess_info::arc_bimap::value_type;
 
 	int a2 = info.A2.size();
+	
+	// Perturb the cost
+	constexpr static double TOLLFREE_PERTURBATION = 0.0001;
+	static std::uniform_real_distribution<cost_type> dist;
+	static std::default_random_engine rng;
+
+	cost += dist(rng) * TOLLFREE_PERTURBATION;
 
 	// If there exists a tolled arc with the same (src, dst), create a virtual node
 	if (info.bimap_A.right.count(make_pair(src, dst))) {
