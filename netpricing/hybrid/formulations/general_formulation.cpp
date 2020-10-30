@@ -76,47 +76,17 @@ void general_formulation::prepare()
 	// Process path
 	toll_sets.resize(P);
 	arc_sets.resize(P);
-	lgraph->set_toll_arcs_enabled(false);
 
 	LOOP(p, P) {
+		// Extract toll sets
 		auto toll_arcs = original.get_toll_list(paths[p]);
-		set<int> toll_heads;
-		toll_heads.insert(prob->commodities[k].destination);
-
-		// Extract toll sets and toll heads
 		for (const auto& pair : toll_arcs) {
 			auto edge = EDGE_FROM_SRC_DST(*prob, pair.first, pair.second);
 			toll_sets[p].insert(EDGE_TO_A1(*prob, edge));
-			toll_heads.insert(pair.first);
 		}
 
 		// Transform path
-		vector<int> new_path;
-		vector<int>& old_path = paths[p];
-		auto it = old_path.begin();
-
-		while (it != old_path.end()) {
-			int src = *it;
-			it = find_if(it, old_path.end(),
-						 [&](int i) {
-							 return toll_heads.count(i);
-						 });
-			assert(it != old_path.end());
-			int dst = *it;
-
-			if (src == dst) {
-				new_path.push_back(src);
-			}
-			else {
-				auto segment = lgraph->shortest_path(src, dst);
-				assert(segment.size());
-				new_path.insert(new_path.end(), segment.begin(), segment.end());
-			}
-
-			it++;
-		}
-
-		paths[p] = new_path;
+		paths[p] = convert_path_to_new_graph(paths[p], original, *lgraph);
 
 		// Extract arc sets
 		for (int i = 0; i < paths[p].size() - 1; i++) {
@@ -124,8 +94,6 @@ void general_formulation::prepare()
 			arc_sets[p].insert(a);
 		}
 	}
-
-	lgraph->set_toll_arcs_enabled(true);
 
 	null_costs.resize(P);
 	LOOP(p, P) null_costs[p] = lgraph->get_path_cost(paths[p], false);
@@ -497,41 +465,7 @@ std::vector<int> general_formulation::get_optimal_path()
 
 	// Reverse preprocessing
 	light_graph original(prob->graph);
-	original.set_toll_arcs_enabled(false);
-
-	auto toll_arcs = lgraph->get_toll_list(primal_path);
-	set<int> toll_heads;
-	toll_heads.insert(prob->commodities[k].destination);
-
-	// Extract toll heads
-	for (const auto& pair : toll_arcs) {
-		auto edge = EDGE_FROM_SRC_DST(*prob, pair.first, pair.second);
-		toll_heads.insert(pair.first);
-	}
-
-	path new_path;
-	auto it = primal_path.begin();
-
-	while (it != primal_path.end()) {
-		int src = *it;
-		it = find_if(it, primal_path.end(),
-					 [&](int i) {
-						 return toll_heads.count(i);
-					 });
-		assert(it != primal_path.end());
-		int dst = *it;
-
-		if (src == dst) {
-			new_path.push_back(src);
-		}
-		else {
-			auto segment = original.shortest_path(src, dst);
-			assert(segment.size());
-			new_path.insert(new_path.end(), segment.begin(), segment.end());
-		}
-
-		it++;
-	}
+	path new_path = convert_path_to_new_graph(primal_path, *lgraph, original);
 
 	return new_path;
 }
@@ -722,4 +656,41 @@ std::vector<int> general_formulation::extract_path_from_src_dst_map(const std::m
 	}
 
 	return path;
+}
+
+std::vector<int> general_formulation::convert_path_to_new_graph(const path& old_path, const light_graph& old_graph, light_graph& new_graph)
+{
+	vector<int> new_path;
+	new_graph.set_toll_arcs_enabled(false);
+
+	// Extract toll heads
+	auto toll_arcs = old_graph.get_toll_list(old_path);
+	set<int> toll_heads;
+	toll_heads.insert(prob->commodities[k].destination);
+
+	for (const auto& pair : toll_arcs) {
+		toll_heads.insert(pair.first);
+	}
+
+	for (auto it = old_path.begin(); it != old_path.end(); it++) {
+		int src = *it;
+		it = find_if(it, old_path.end(),
+					 [&](int i) {
+						 return toll_heads.count(i);
+					 });
+		assert(it != old_path.end());
+		int dst = *it;
+
+		if (src == dst) {
+			new_path.push_back(src);
+		}
+		else {
+			auto segment = new_graph.shortest_path(src, dst);
+			assert(segment.size());
+			new_path.insert(new_path.end(), segment.begin(), segment.end());
+		}
+	}
+
+	new_graph.set_toll_arcs_enabled(true);
+	return new_path;
 }

@@ -53,7 +53,7 @@ preprocess_info path_preprocessor::preprocess_impl(const light_graph& graph, con
 	info.reduce(comm.origin, comm.destination);
 	info.clean();
 
-	cout << "Comm " << k << ": " << P << " paths, " << info.V.size() << " nodes, "
+	cout << "Comm " << k << " (PATH): " << P << " paths, " << info.V.size() << " nodes, "
 		<< info.A.size() << " arcs (" << info.A1.size() << " tolled)" << endl;
 
 	return info;

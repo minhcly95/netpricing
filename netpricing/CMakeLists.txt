@@ -48,6 +48,7 @@ add_executable(netpricing
 	"hybrid/formulations/arc_path_standard_formulation.cpp"
 	"hybrid/formulations/arc_path_value_func_formulation.cpp"
 	"hybrid/formulations/general_formulation.cpp"
+	"hybrid/formulations/sstd_formulation.cpp"
 	"hybrid/preprocessors/path_preprocessor.cpp"
 	"hybrid/preprocessors/spgm_preprocessor.cpp"
 	"hybrid/preprocessors/path_spgm_preprocessor.cpp"

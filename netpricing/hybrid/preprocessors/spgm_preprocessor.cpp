@@ -15,7 +15,7 @@ void add_toll_free_arc(preprocess_info& info, int& a, int src, int dst, cost_typ
 	int a2 = info.A2.size();
 	
 	// Perturb the cost
-	constexpr static double TOLLFREE_PERTURBATION = 0.001;
+	constexpr static double TOLLFREE_PERTURBATION = 0.01;
 	static std::uniform_real_distribution<cost_type> dist;
 	static std::default_random_engine rng;
 
@@ -193,7 +193,7 @@ preprocess_info spgm_preprocessor::preprocess_impl(const light_graph& graph, con
 	info.prune(orig, dest);
 	info.clean();
 
-	cout << "Comm " << k << ": " << info.V.size() << " nodes, "
+	cout << "Comm " << k << " (SPGM): " << info.V.size() << " nodes, "
 		<< info.A.size() << " arcs (" << info.A1.size() << " tolled)" << endl;
 
 	return info;

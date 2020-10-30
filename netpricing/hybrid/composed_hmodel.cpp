@@ -5,6 +5,7 @@
 #include "formulations/general_formulation.h"
 #include "formulations/standard_formulation.h"
 #include "preprocessors/spgm_preprocessor.h"
+#include "formulations/sstd_formulation.h"
 
 #include <iostream>
 #include <sstream>
@@ -24,7 +25,8 @@ map<string, string> composed_hmodel::VALID_CODES = {
 	{"apcs2", "Arc-Path Complementary Slackness - Substitution"},
 	{"vfcs2", "Value Function Complementary Slackness - Substitution"},
 	{"pcs2", "Path Complementary Slackness - Substitution"},
-	{"spgm", "SPGM-processed Standard"}
+	{"spgm", "SPGM-processed Standard"},
+	{"sstd", "SPGM-optional Standard"}
 };
 map<string, string> composed_hmodel::VALID_FALLBACK = {
 	{"ustd", "Unprocessed Standard"},
@@ -124,6 +126,8 @@ vector<formulation*> composed_hmodel::assign_formulations()
 				string& form_code = form_codes[i];
 				if (form_code == "spgm")
 					all_forms[k] = new standard_formulation(new spgm_preprocessor());
+				else if (form_code == "sstd")
+					all_forms[k] = new sstd_formulation(paths, *graph);
 				else
 					all_forms[k] = new general_formulation(paths, *graph, form_code);
 				counts[i]++;

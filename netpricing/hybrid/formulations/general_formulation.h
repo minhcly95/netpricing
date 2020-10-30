@@ -76,7 +76,7 @@ struct general_formulation : public formulation {
 	general_formulation(const std::vector<path>& paths, const light_graph& original, const std::string& code);
 	virtual ~general_formulation();
 
-	void prepare();
+	virtual void prepare();
 	bool check_model(space primal, space dual, opt_condition condition);
 
 	virtual void formulate_impl() override;
@@ -93,4 +93,5 @@ struct general_formulation : public formulation {
 
 	// Helper functions
 	std::vector<int> extract_path_from_src_dst_map(const std::multimap<int, int>& src_dst_map);
+	std::vector<int> convert_path_to_new_graph(const path& old_path, const light_graph& old_graph, light_graph& new_graph);
 };
