@@ -15,7 +15,7 @@ void add_toll_free_arc(preprocess_info& info, int& a, int src, int dst, cost_typ
 	int a2 = info.A2.size();
 	
 	// Perturb the cost
-	constexpr static double TOLLFREE_PERTURBATION = 0.0001;
+	constexpr static double TOLLFREE_PERTURBATION = 0.001;
 	static std::uniform_real_distribution<cost_type> dist;
 	static std::default_random_engine rng;
 
