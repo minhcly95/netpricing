@@ -20,7 +20,7 @@ The code is written in C++ and should be compiled on a Linux machine. These libr
 First, create a folder and clone this repository into a subfolder named `src/`:
 
 ```
-git clone (git link here) src
+git clone https://github.com/minhcly95/netpricing.git src
 ```
 
 Then, create another subfolder named `build/` and open it:
